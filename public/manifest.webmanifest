@@ -1,0 +1,9 @@
+{
+  "name": "Thomas Greco",
+  "short_name": "tgrecojs",
+  "start_url": "/",
+  "display": "minimal-ui",
+  "background_color": "#f2efe7",
+  "theme_color": "#f2efe7",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

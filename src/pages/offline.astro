@@ -1,0 +1,18 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="Offline" description="This page has not been saved for offline reading.">
+  <section class="offline">
+    <h1>You're offline</h1>
+    <p class="prose">
+      This page hasn't been opened on this device before, so there is no saved copy. Pages you have already read
+      are still available from the <a href="/">home page</a>.
+    </p>
+  </section>
+</Base>
+
+<style>
+  .offline { margin-top: 3.5rem; }
+  h1 { font-family: var(--f-display); font-weight: 700; font-variation-settings: "opsz" 144; font-size: 2.4rem; margin: 0 0 1rem; letter-spacing: -.02em; }
+</style>

@@ -1,0 +1,108 @@
+---
+title: "Fun with Functors"
+description: "JavaScript arrays are functors. What that means, the two laws they follow, and how to build a Box of your own."
+pubDate: 2018-05-01
+tags: ["javascript", "functional-programming", "functors"]
+minutesRead: 5
+---
+
+{/* First published 1 May 2018 on tgreco.xyz (Vercel: tgreco-xyz-blog-9xnft76mp-thomasgreco.vercel.app/posts/firstpost/). */}
+
+{/* Light edit of the 2018 original. Changes: typos and grammar, variable names in prose
+    now match the code, the composition example uses `data` instead of the undefined
+    `functor`, "4 values" corrected to one value, the social-share sign-off dropped.
+    The Box snippet is reconstructed: the original page cuts off before it. Check it. */}
+
+## Intro
+
+The first topic we'll cover is the **functor data type**. Functors are everywhere, whether you are aware of it or not.
+
+## Meet functor
+
+The essence of a **functor data type** is that it is `mappable`. This simply means that it provides a container (or box) that we can `map` through in order to read or transform values. The focal point of that last sentence is *a container that we can map through*. Sounds kinda familiar, right? Let's think for a second. In the context of JavaScript, can you think of any objects that fit this description?
+
+```js
+const exampleFunctor = [1, 2, 3, 4, 5];
+```
+
+Above we see the `exampleFunctor` variable being set to an array, or a container, with values inside of it. Do you know what this means? It means you've been mastering functors all along 😎.
+
+### Prove it
+
+Hopefully, by now you're beginning to cozy up to the complex terminology used in FP. The goal for this article (and every article I write focused on teaching concepts) is essentially the same: to remove the confusion that stems from FP's terminology. JavaScript's `Array` type is a functor.
+
+```
+[Box of `a`s] ------> [Box of `b`s]
+```
+
+### Testing `map`
+
+Below, `functor` is a single-element array, `[10]`. Two new functors, `x` and `y`, are created with JavaScript's built-in `Array.prototype.map` method.
+
+```js
+const doubleIt = (x) => x * 2;
+
+const functor = [10];
+const x = functor.map(doubleIt);
+const y = functor.map((x) => x * 2);
+// testing equality
+console.log(x.toString() === y.toString()); // true
+```
+
+### Functor laws
+
+The two functor laws are:
+
+- **Identity**: the `id` function must always `map` a functor back to the **same value**.
+
+  ```js
+  const id = (x) => x;
+  [1, 2, 3].map(id); // returns [1,2,3]
+  ```
+
+- **Composition**: given `g: x => y` and `f: y => z`, **there must be a composition that goes directly `x → z`**.
+
+This composition law is the same one I was forced to learn in algebra class. It's associative, meaning that the order in which it is computed does not matter. Realizing this was a big "a-ha" moment when studying functional programming.
+
+Ex.: (f ∘ g) ∘ h = f ∘ g ∘ h = f ∘ (g ∘ h)
+
+Now that we know the functor laws, let's apply them to another array. Below we have the following:
+
+- `f` takes an `x` and divides it by `0.5`
+- `g` takes an `x` and multiplies it by `16`
+- `data` is a functor containing a single value
+
+```js
+const f = (x) => x / 0.5;
+const g = (x) => x * 16;
+const data = [25];
+
+// identity law
+console.log(data.toString() === data.map((x) => x).toString()); // 25 === 25
+
+// composition law
+console.log(
+  data.map(g).map(f).toString() === data.map((x) => f(g(x))).toString()
+); // true
+```
+
+Our one-value `data` array satisfies both the identity and composition laws. Maybe you're not impressed by it. Well, that's too bad, but don't give up just yet.
+
+## Build your own: the Box functor
+
+We've seen functors in action and we've learned the rules they must abide by. Now let's create one for ourselves. The `Box` functor (often referred to as the `Identity` functor) takes a value as its input. From there, it returns an object `{}` with a `map` method inside of it. When this `map` executes, it applies its input `fn` to the value inside and returns the result wrapped inside a new `Box`. What's that you said? This `map` implementation sounds awfully familiar to JavaScript's `Array.prototype.map`. Well, friend, *that's because it is*! Taking a look at the code snippet below, we see how our `Box` function's `map` method is implemented.
+
+{/* TODO: reconstructed, the original page ends before this snippet. Replace with yours if you still have it. */}
+
+```js
+const Box = (x) => ({
+  map: (fn) => Box(fn(x)),
+  fold: (fn) => fn(x),
+  toString: () => `Box(${x})`,
+});
+
+Box(10)
+  .map(doubleIt)
+  .map((x) => x + 1)
+  .fold(console.log); // 21
+```

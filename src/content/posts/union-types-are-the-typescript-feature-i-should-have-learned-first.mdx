@@ -1,0 +1,118 @@
+---
+title: "Prevent Impossible States Pt. 1 - Union Types"
+description: "Use TypeScript discriminated unions to require the right fields, narrow object types, and catch unhandled cases."
+pubDate: 2026-10-27
+tags: ["typescript", "union-types", "category-theory", "series"]
+series: "Impossible States"
+seriesOrder: 1
+draft: false
+minutesRead: 4
+source: hindleymilner
+canonical: "https://blog.hindleymilner.com/blog/union-types-are-the-typescript-feature-i-should-have-learned-first"
+---
+
+{/* Mirrored from hindleymilner.com by scripts/mirror-hm.mjs. Edit the original in hm-blog, then run `npm run mirror`. */}
+
+
+For years, I was firmly in the JavaScript >>>>> TypeScript camp. I’ve since used TypeScript professionally, but I’m still finding features I should have learned sooner. Discriminated unions are one of them. In JavaScript land, I often turned to libraries like [daggy](https://github.com/fantasyland/daggy) to create tagged constructors. In this post, we're going to model tagged unions using TypeScript.[^reason] We owe our users software that doesn't accept states we already know are invalid.
+
+## Laying the groundwork
+
+A [union type](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#union-types) is formed from two or more other types. These types are called the union’s members.
+
+```ts
+type UserId = string | number;
+```
+
+The `UserId` union has the members `string` and `number`.
+
+That gets more interesting when we’re working with objects. Say **a user must provide an email address, a phone number, or both**.[^contact] We might start by making both fields optional.
+
+```ts
+type ContactDetails = {
+  email?: string;
+  phoneNumber?: string;
+};
+
+const contact: ContactDetails = {}; // This compiles.
+```
+
+This compiles, but with `email` and `phoneNumber` both optional, we've also allowed a user to provide neither.
+
+## Giving each case its own type
+
+We have three cases to describe: an email address, a phone number, or both. We can write each case as an object type, then combine them into a union.
+
+```ts
+type ContactDetails =
+  | { kind: 'email'; email: string }
+  | { kind: 'phone'; phoneNumber: string }
+  | { kind: 'both'; email: string; phoneNumber: string };
+```
+
+Each member has a `kind` field with a different string literal type. `kind: 'email'` means that field must contain exactly `'email'`. This shared field is the **discriminant**, or **tag**, and it makes this a [discriminated union](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#discriminated-unions). The name doesn't matter; we could call it `contactMethod`. Checking its value lets TypeScript rule out members that don't match.
+
+The contact fields are now required in their respective cases. An `'email'` contact needs an email address, a `'phone'` contact needs a phone number, and `'both'` needs both.
+
+We can use that relationship to read the email address:
+
+```ts
+const getEmail = (contact: ContactDetails): string | undefined =>
+  contact.kind !== 'phone'
+    ? contact.email
+    : undefined;
+```
+
+This is called **narrowing**. The condition `contact.kind !== 'phone'` rules out the phone-only member. That leaves `'email'` and `'both'`. Both require an email address, so TypeScript knows we can read `contact.email` in that branch. For a phone-only contact, the function returns `undefined`.
+
+## Checking our original example
+
+With the new `ContactDetails` definition, the empty object from our first example is a type error:
+
+```ts
+const contact: ContactDetails = {};
+// Error: Type '{}' is not assignable to type 'ContactDetails'.
+```
+
+We now have to choose **one of the three cases** and **provide the fields it requires**.
+
+## Handling every case
+
+We can also handle each member separately. For example, a user profile could display a contact summary:
+
+```ts
+const describeContact = (contact: ContactDetails): string => {
+  switch (contact.kind) {
+    case 'email':
+      return `Email: ${contact.email}`;
+    case 'phone':
+      return `Phone: ${contact.phoneNumber}`;
+    case 'both':
+      return `Email: ${contact.email}, phone: ${contact.phoneNumber}`;
+    default: {
+      const unreachable: never = contact;
+      return unreachable;
+    }
+  }
+};
+```
+
+Each branch handles one member of the union. After all three, the assignment to `never` checks that no case remains. This is an [exhaustiveness check](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking): add another member without handling it here, and TypeScript reports an error at that assignment.
+
+## What this does not solve yet
+
+We've described which fields each case requires, but we haven't checked whether an email address or phone number is valid. An empty string still satisfies `string`. Data coming from a form or an API still needs runtime validation.
+
+We also haven't defined which changes are allowed. A timer's `idle`, `running`, and `paused` states may all be valid, but that doesn't tell us whether to accept a pause event while it's idle. A state machine lets us make those transition rules explicit.
+
+## The lesson
+
+Two optional fields allowed a case we didn't want. The discriminated union makes our three allowed cases explicit, and TypeScript can check how we create and handle them.
+
+Next, we're going to build an interval timer using a state machine. We'll define its states, the events it accepts, and the rules for moving between them. The transition logic will be deterministic: the same state and event will produce the same result.
+
+Later in the series, we'll keep clocks, API calls, and other asynchronous work separate from that core, so we can test the timer's rules without waiting on a clock or a network request.
+
+[^reason]: I tinkered with ReasonML a few years back. Dave Aitken's [article on ReasonML state machines](https://medium.com/imandra/exploring-the-apple-facetime-bug-with-reasonml-state-machines-79e433222f80) uses variants and Imandra to explore a simplified model inspired by the FaceTime bug.
+
+[^contact]: This example adapts the three-case structure in busypeoples' [Making Impossible States Impossible in ReasonML](https://gist.github.com/busypeoples/ab2f993843f23614232a1f8500a4b542). The original uses email and social login; here, we're using email and phone contact details.
