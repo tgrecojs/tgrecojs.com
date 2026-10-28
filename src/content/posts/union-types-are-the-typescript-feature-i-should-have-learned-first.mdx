@@ -14,11 +14,13 @@ canonical: "https://blog.hindleymilner.com/blog/union-types-are-the-typescript-f
 {/* Mirrored from hindleymilner.com by scripts/mirror-hm.mjs. Edit the original in hm-blog, then run `npm run mirror`. */}
 
 
-For years, I was firmly in the JavaScript >>>>> TypeScript camp. I’ve since used TypeScript professionally, but I’m still finding features I should have learned sooner. Discriminated unions are one of them. In JavaScript land, I often turned to libraries like [daggy](https://github.com/fantasyland/daggy) to create tagged constructors. In this post, we're going to model tagged unions using TypeScript.[^reason] We owe our users software that doesn't accept states we already know are invalid.
+For years, I was firmly in the JavaScript > TypeScript camp. Prototypal inheritance and sweet, sweet object composition gave me plenty to work with. After using TypeScript professionally, I've come to appreciate its expressivity, especially when it comes to describing which states a system should allow.
+
+And so I present to you: the discriminated union. In JavaScript land, I used libraries like [daggy](https://github.com/fantasyland/daggy) to model tagged unions. TypeScript lets us describe those cases directly in its type system.[^reason]
 
 ## Laying the groundwork
 
-A [union type](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#union-types) is formed from two or more other types. These types are called the union’s members.
+A [union type](https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#union-types) is formed from two or more other types. These types are called the union’s **members**.
 
 ```ts
 type UserId = string | number;
@@ -34,14 +36,20 @@ type ContactDetails = {
   phoneNumber?: string;
 };
 
-const contact: ContactDetails = {}; // This compiles.
+const contact: ContactDetails = {};
 ```
 
-This compiles, but with `email` and `phoneNumber` both optional, we've also allowed a user to provide neither.
+This compiles. But with `email` and `phoneNumber` both optional, we've also allowed a user to provide neither.
 
 ## Giving each case its own type
 
-We have three cases to describe: an email address, a phone number, or both. We can write each case as an object type, then combine them into a union.
+We have three cases to describe:
+
+- an email address
+- a phone number
+- both
+
+We can write each case as an object type, then combine them into a discriminated union.
 
 ```ts
 type ContactDetails =
@@ -50,11 +58,17 @@ type ContactDetails =
   | { kind: 'both'; email: string; phoneNumber: string };
 ```
 
-Each member has a `kind` field with a different string literal type. `kind: 'email'` means that field must contain exactly `'email'`. This shared field is the **discriminant**, or **tag**, and it makes this a [discriminated union](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#discriminated-unions). The name doesn't matter; we could call it `contactMethod`. Checking its value lets TypeScript rule out members that don't match.
+Every member has a `kind` field with a different string literal type: `'email'`, `'phone'`, or `'both'`. This shared field is the union's *discriminant* (or *tag*).
 
-The contact fields are now required in their respective cases. An `'email'` contact needs an email address, a `'phone'` contact needs a phone number, and `'both'` needs both.
+> The name doesn't matter; we could call it `contactMethod`, but `kind` is a strong generic choice.
 
-We can use that relationship to read the email address:
+The contact fields are now required in their respective cases:
+
+- An `'email'` contact needs an email address.
+- A `'phone'` contact needs a phone number.
+- A `'both'` contact needs both.
+
+We can check `kind` before reading the email address. TypeScript uses that check to rule out members that don't match. This is called [**narrowing**](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#discriminated-unions).
 
 ```ts
 const getEmail = (contact: ContactDetails): string | undefined =>
@@ -62,10 +76,11 @@ const getEmail = (contact: ContactDetails): string | undefined =>
     ? contact.email
     : undefined;
 ```
+The condition `contact.kind !== 'phone'` rules out the phone-only member, leaving `'email'` and `'both'`.
 
-This is called **narrowing**. The condition `contact.kind !== 'phone'` rules out the phone-only member. That leaves `'email'` and `'both'`. Both require an email address, so TypeScript knows we can read `contact.email` in that branch. For a phone-only contact, the function returns `undefined`.
+Both require an email address, so TypeScript knows we can read `contact.email` in that branch. When `contact.kind` is `'phone'`, the function returns `undefined`.
 
-## Checking our original example
+## Enforcing the requirements
 
 With the new `ContactDetails` definition, the empty object from our first example is a type error:
 
@@ -108,10 +123,6 @@ We also haven't defined which changes are allowed. A timer's `idle`, `running`, 
 ## The lesson
 
 Two optional fields allowed a case we didn't want. The discriminated union makes our three allowed cases explicit, and TypeScript can check how we create and handle them.
-
-Next, we're going to build an interval timer using a state machine. We'll define its states, the events it accepts, and the rules for moving between them. The transition logic will be deterministic: the same state and event will produce the same result.
-
-Later in the series, we'll keep clocks, API calls, and other asynchronous work separate from that core, so we can test the timer's rules without waiting on a clock or a network request.
 
 [^reason]: I tinkered with ReasonML a few years back. Dave Aitken's [article on ReasonML state machines](https://medium.com/imandra/exploring-the-apple-facetime-bug-with-reasonml-state-machines-79e433222f80) uses variants and Imandra to explore a simplified model inspired by the FaceTime bug.
 
