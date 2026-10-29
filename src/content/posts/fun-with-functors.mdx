@@ -13,9 +13,11 @@ import FunctorLaws from '../../components/functor-laws/FunctorLaws.astro';
 {/* Light edit of the 2018 original. Changes: typos and grammar, variable names in prose
     now match the code, the composition example uses `data` instead of the undefined
     `functor`, "4 values" corrected to one value, the social-share sign-off dropped.
-    The Box snippet is reconstructed: the original page cuts off before it. Check it.
-    Oct 29 2026: laws and the Box arrow set as math, associativity reworded (grouping,
-    not order), composition bullet tied to the map law the code tests, law checker added. */}
+    Oct 29 2026: laws and the Box arrow set as math, composition law separated from
+    associativity (associativity belongs to function composition, not the map law),
+    law checker added. */}
+
+*I originally wrote this post in 2018.*
 
 ## Intro
 
@@ -74,7 +76,14 @@ The two functor laws are:
   \mathrm{map}(f \circ g) = \mathrm{map}(f) \circ \mathrm{map}(g)
   $$
 
-This composition law is the same one I was forced to learn in algebra class. It's associative, meaning that how we group the functions doesn't change the result. Realizing this was a big "a-ha" moment when studying functional programming.
+  ```js
+  [1, 2, 3].map(g).map(f); // same result as
+  [1, 2, 3].map((x) => f(g(x)));
+  ```
+
+The `f ∘ g` in that law is the same function composition I was forced to learn in algebra class: (f ∘ g)(x) = f(g(x)). Realizing that `map` respects composition was a big "a-ha" moment when studying functional programming. Two maps in a row can always be fused into one.
+
+Function composition is also associative, meaning that how we group the functions doesn't change the result. That's a property of composition itself, not one of the functor laws, but it's why we can chain as many maps as we like.
 
 $$
 (f \circ g) \circ h = f \circ g \circ h = f \circ (g \circ h)
@@ -92,7 +101,7 @@ const g = (x) => x * 16;
 const data = [25];
 
 // identity law
-console.log(data.toString() === data.map((x) => x).toString()); // 25 === 25
+console.log(data.toString() === data.map((x) => x).toString()); // true
 
 // composition law
 console.log(
@@ -105,8 +114,6 @@ Our one-value `data` array satisfies both the identity and composition laws. May
 ## Build your own: the Box functor
 
 We've seen functors in action and we've learned the rules they must abide by. Now let's create one for ourselves. The `Box` functor (often referred to as the `Identity` functor) takes a value as its input. From there, it returns an object `{}` with a `map` method inside of it. When this `map` executes, it applies its input `fn` to the value inside and returns the result wrapped inside a new `Box`. What's that you said? This `map` implementation sounds awfully familiar to JavaScript's `Array.prototype.map`. Well, friend, *that's because it is*! Taking a look at the code snippet below, we see how our `Box` function's `map` method is implemented.
-
-{/* TODO: reconstructed, the original page ends before this snippet. Replace with yours if you still have it. */}
 
 ```js
 const Box = (x) => ({
