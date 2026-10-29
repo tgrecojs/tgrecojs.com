@@ -13,6 +13,11 @@ canonical: "https://blog.hindleymilner.com/blog/prevent-impossible-states-pt-2-s
 
 {/* Mirrored from hindleymilner.com by scripts/mirror-hm.mjs. Edit the original in hm-blog, then run `npm run mirror`. */}
 
+import TsSandbox from '../../components/ts-sandbox/TsSandbox.astro';
+import exhaustiveSwitch from '../../sandbox/exhaustive-switch.ts?raw';
+import timerStateShapes from '../../sandbox/timer-state-shapes.ts?raw';
+import timerTransitions from '../../sandbox/timer-transitions.ts?raw';
+import timer from '../../sandbox/timer.ts?raw';
 
 This post builds on discriminated unions. They let us describe valid state shapes, but on their own, they don't define which state transitions are valid.
 
@@ -65,13 +70,7 @@ We'll use both unions together to create our state machine, with a strict set of
 
 In our model, `remainingSeconds` is required when a timer's status is `running` or `paused`, and it isn't part of the other cases. The object literals below therefore produce type errors.
 
-```ts
-// @ts-expect-error  an idle timer has no remaining time
-const bad: TimerState = { status: 'idle', remainingSeconds: 5 };
-
-// @ts-expect-error  a running timer must say how much time is left
-const bad2: TimerState = { status: 'running' };
-```
+<TsSandbox id="timer-state-shapes" title="State shapes" code={timerStateShapes} />
 
 ## Modeling enforceable transitions
 
@@ -150,31 +149,13 @@ const transition: Transition = (state, event) => {
 
 In JavaScript land, we're used to finishing a reducer with `default: return state`. In the outer switch here, though, we're checking `state.status`, so we can use `never` to ensure that every status in `TimerState` has a corresponding case. If we add a status without handling it, TypeScript reports a type error.
 
+<TsSandbox id="exhaustive-switch" title="Exhaustive switch" code={exhaustiveSwitch} />
+
 Inside our `tick` case, the condition `state.remainingSeconds > 1` determines whether the timer has more than one second left. If true, the next `TimerState` keeps the `running` status, with `remainingSeconds` decremented by one. When `remainingSeconds` is `1`, the function returns a new `TimerState` with `status: 'finished'`.
 
 We're also isolating our timer logic from the clock, which lends itself well to testing.
 
-```ts
-const idle: TimerState = { status: 'idle' };
-
-const running = transition(idle, { type: 'start', durationSeconds: 2 });
-// { status: 'running', remainingSeconds: 2 }
-
-const paused = transition(running, { type: 'pause' });
-// { status: 'paused', remainingSeconds: 2 }
-
-const resumed = transition(paused, { type: 'resume' });
-// { status: 'running', remainingSeconds: 2 }
-
-const finished = transition(transition(resumed, { type: 'tick' }), { type: 'tick' });
-// { status: 'finished' }
-
-const stillIdle = transition(idle, { type: 'pause' });
-// { status: 'idle' } — pause doesn't apply to an idle timer, so nothing changes
-
-// @ts-expect-error  'start' requires durationSeconds
-transition(idle, { type: 'start' });
-```
+<TsSandbox id="timer-transitions" title="Transitions in action" code={timerTransitions} files={{ 'timer.ts': timer }} />
 
 ## Inputs and UI actions
 

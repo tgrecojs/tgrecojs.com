@@ -1,17 +1,22 @@
 // One editor. Creates a TypeScript Sandbox in the host element with its own
-// virtual file, and exposes check (run diagnostics) and reset (restore the
+// virtual folder (the editor's file plus any companion files), and exposes
+// check (run diagnostics), run (execute the program) and reset (restore the
 // original source). Instances share the runtime but nothing else.
 
 import { siteConfig } from '../site-config';
 import { CHECK_DEBOUNCE_MS, compilerOptions } from './config';
 import { renderDiagnostics, toReadable, type ReadableDiagnostic } from './diagnostics';
+import { appendLine, clearOutput, showRunResult, showRunning, type OutputView } from './output';
+import { runProgram } from './run';
 import type { MonacoEditor, MonacoEditorApi, MonacoNamespace, MonacoUri, Sandbox, SandboxRuntime } from './types';
 
 export interface SandboxInstance {
   sandbox: Sandbox;
   /** Runs syntactic and semantic checking and re-renders the diagnostics list. */
   check: () => Promise<ReadableDiagnostic[]>;
-  /** Restores the original source (undoable with Ctrl/Cmd+Z) and re-checks. */
+  /** Compiles the program and executes it, streaming console output under the editor. */
+  run: () => Promise<void>;
+  /** Restores the original source (undoable with Ctrl/Cmd+Z), clears output and re-checks. */
   reset: () => Promise<ReadableDiagnostic[]>;
   focus: () => void;
 }
@@ -20,6 +25,16 @@ export interface InstanceElements {
   host: HTMLElement;
   status: HTMLElement;
   list: HTMLElement;
+  output: OutputView;
+  runButton: HTMLButtonElement;
+}
+
+export interface InstanceSource {
+  id: string;
+  title: string;
+  code: string;
+  /** Companion TypeScript files the editor may import, keyed by file name (e.g. "timer.ts"). */
+  files: Record<string, string>;
 }
 
 const MIN_HEIGHT = 160;
@@ -27,19 +42,18 @@ const MAX_HEIGHT = 720;
 const SCROLLBAR_ALLOWANCE = 10;
 
 export const createSandboxInstance = (
-  id: string,
-  title: string,
-  source: string,
+  source: InstanceSource,
   elements: InstanceElements,
   runtime: SandboxRuntime,
 ): SandboxInstance => {
   const { monaco, ts, sandboxFactory } = runtime;
-  const uri = monaco.Uri.file(`/ts-sandbox/${id}.ts`);
+  const folder = `/ts-sandbox/${source.id}`;
+  const uri = monaco.Uri.file(`${folder}/index.ts`);
   monaco.editor.getModel(uri)?.dispose();
 
   const sandbox = sandboxFactory.createTypeScriptSandbox(
     {
-      text: source,
+      text: source.code,
       elementToAppend: elements.host,
       filetype: 'ts',
       compilerOptions,
@@ -48,15 +62,20 @@ export const createSandboxInstance = (
       suppressAutomaticallyGettingDefaultText: true,
       suppressAutomaticallyGettingCompilerFlags: true,
       logger: { log: () => {} },
-      monacoSettings: editorSettings(title),
+      monacoSettings: editorSettings(source.title),
     },
     isolatedMonaco(monaco, uri),
     ts,
   );
 
+  for (const [name, content] of Object.entries(source.files)) {
+    sandbox.languageServiceDefaults.addExtraLib(content, `file://${folder}/${name}`);
+  }
+
   const { editor } = sandbox;
   const model = sandbox.getModel();
   const view = { status: elements.status, list: elements.list };
+  let lastDiagnostics: ReadableDiagnostic[] = [];
 
   fitHeight(editor, elements.host);
   editor.onDidContentSizeChange(() => fitHeight(editor, elements.host));
@@ -80,7 +99,10 @@ export const createSandboxInstance = (
         client.getSemanticDiagnostics(file),
       ]);
       const items = toReadable(ts, model, [...syntactic, ...semantic]);
-      if (run === generation) renderDiagnostics(view, items, jumpTo);
+      if (run === generation) {
+        lastDiagnostics = items;
+        renderDiagnostics(view, items, jumpTo);
+      }
       return items;
     } catch (error) {
       if (run === generation) {
@@ -97,16 +119,38 @@ export const createSandboxInstance = (
     timer = window.setTimeout(() => void check().catch(() => {}), CHECK_DEBOUNCE_MS);
   });
 
+  let running = false;
+  const run = async () => {
+    if (running) return;
+    running = true;
+    elements.runButton.disabled = true;
+    showRunning(elements.output);
+    try {
+      const js = await sandbox.getRunnableJS();
+      const result = await runProgram(ts, js, source.files, (line) => appendLine(elements.output, line));
+      const typeErrors = lastDiagnostics.filter((item) => item.severity === 'error').length;
+      showRunResult(elements.output, result, typeErrors);
+    } catch (error) {
+      showRunResult(elements.output, { lines: [], error: `Could not compile: ${describe(error)}`, durationMs: 0 }, 0);
+    } finally {
+      running = false;
+      elements.runButton.disabled = false;
+    }
+  };
+
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => void run());
+
   const reset = () => {
     model.pushStackElement();
-    model.pushEditOperations(null, [{ range: model.getFullModelRange(), text: source }], () => null);
+    model.pushEditOperations(null, [{ range: model.getFullModelRange(), text: source.code }], () => null);
     model.pushStackElement();
     editor.setPosition({ lineNumber: 1, column: 1 });
     window.clearTimeout(timer);
+    clearOutput(elements.output);
     return check();
   };
 
-  return { sandbox, check, reset, focus: () => editor.focus() };
+  return { sandbox, check, run, reset, focus: () => editor.focus() };
 };
 
 /**

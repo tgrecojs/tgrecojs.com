@@ -51,3 +51,5 @@ const transition = (state: TimerState, event: TimerEvent): TimerState => {
     }
   }
 };
+
+console.log(transition({ status: 'idle' }, { type: 'start', durationSeconds: 3 }));

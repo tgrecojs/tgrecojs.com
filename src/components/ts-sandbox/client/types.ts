@@ -72,6 +72,7 @@ export interface MonacoEditor {
   getContentHeight(): number;
   setPosition(position: MonacoPosition): void;
   revealPositionInCenter(position: MonacoPosition): void;
+  addCommand(keybinding: number, handler: () => void): string | null;
   onDidChangeModelContent(listener: () => void): MonacoDisposable;
   onDidContentSizeChange(listener: () => void): MonacoDisposable;
 }
@@ -101,6 +102,8 @@ export interface MonacoEditorApi {
 export interface MonacoNamespace {
   Uri: { file(path: string): MonacoUri };
   editor: MonacoEditorApi;
+  KeyMod: { CtrlCmd: number };
+  KeyCode: { Enter: number };
 }
 
 export interface TsMessageChain {
@@ -120,6 +123,10 @@ export interface TsNamespace {
   version: string;
   DiagnosticCategory: { Warning: number; Error: number; Suggestion: number; Message: number };
   flattenDiagnosticMessageText(message: string | TsMessageChain | undefined, newLine: string): string;
+  transpileModule(
+    input: string,
+    options: { compilerOptions: Record<string, unknown>; fileName?: string },
+  ): { outputText: string };
 }
 
 export interface TsWorkerClient {
@@ -146,7 +153,9 @@ export interface Sandbox {
   getText(): string;
   setText(text: string): void;
   getWorkerProcess(): Promise<TsWorkerClient>;
+  getRunnableJS(): Promise<string>;
   getCompilerOptions(): Record<string, unknown>;
+  languageServiceDefaults: { addExtraLib(content: string, filePath: string): MonacoDisposable };
 }
 
 export interface SandboxFactory {

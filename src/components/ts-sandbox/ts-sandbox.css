@@ -11,6 +11,7 @@
   --tss-muted: var(--text-muted, var(--ink-3, #5f6673));
   --tss-accent: var(--logic-blue, var(--accent, #2f55d4));
   --tss-ok: var(--mint, var(--logic-blue, #2f8f5b));
+  --tss-warn: var(--mustard, var(--logic-blue, #b7791f));
   --tss-error: var(--draft, #e5484d);
   --tss-mono: var(--font-mono, var(--f-mono, ui-monospace, Menlo, monospace));
   --tss-radius: 6px;
@@ -71,6 +72,18 @@
 .ts-sandbox__button:disabled {
   opacity: 0.6;
   cursor: progress;
+}
+.ts-sandbox__button--run {
+  color: var(--tss-accent);
+  border-color: var(--tss-accent);
+  font-weight: 600;
+}
+.ts-sandbox__button--run::before {
+  content: '▶';
+  font-size: 0.65em;
+  margin-right: 0.5em;
+  position: relative;
+  top: -0.05em;
 }
 @media (pointer: coarse) {
   .ts-sandbox__button {
@@ -159,6 +172,62 @@
   min-width: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+/* Program output, written by the sandbox's own console binding. */
+.ts-sandbox__output {
+  margin: 0.65rem 0 0;
+  border: 1px solid var(--tss-border);
+  border-radius: var(--tss-radius);
+  background: var(--tss-surface);
+  overflow: hidden;
+}
+.ts-sandbox__output-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  padding: 0.45rem 0.75rem;
+  border-bottom: 1px solid var(--tss-border);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+.ts-sandbox__output-label {
+  color: var(--tss-text);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.ts-sandbox__output-status {
+  color: var(--tss-muted);
+  letter-spacing: 0.02em;
+}
+.ts-sandbox__output-status--error {
+  color: var(--tss-error);
+}
+.ts-sandbox__output-lines {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  max-height: 320px;
+  overflow: auto;
+  font: 400 0.8rem/1.55 var(--tss-mono);
+  color: var(--tss-text);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ts-sandbox__output-lines:empty {
+  display: none;
+}
+.ts-sandbox__output-line--info {
+  color: var(--tss-accent);
+}
+.ts-sandbox__output-line--warn {
+  color: var(--tss-warn);
+}
+.ts-sandbox__output-line--error {
+  color: var(--tss-error);
 }
 
 .ts-sandbox__hint {

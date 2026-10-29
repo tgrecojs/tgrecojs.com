@@ -1,14 +1,22 @@
 ---
 // TsSandbox: a static, Shiki-highlighted TypeScript block that upgrades on
 // demand into the official TypeScript Sandbox (Monaco + TypeScript 5.9.3,
-// strict) with live diagnostics, a readable error list and a Reset button.
-// Nothing loads from the CDN until the reader presses "Edit this code", so
-// the static block is the whole cost for readers who only want to read.
+// strict) with live diagnostics, a readable error list, a Run button that
+// executes the program and shows its console output, and a Reset button.
+// Nothing loads from the CDN until the reader presses "Edit this code" or
+// "Run", so the static block is the whole cost for readers who only read.
 //
 // Usage in MDX:
 //   import TsSandbox from '../../components/ts-sandbox/TsSandbox.astro';
 //   import example from '../../sandbox/exhaustive-switch.ts?raw';
 //   <TsSandbox id="exhaustive-switch" title="Exhaustive switch" code={example} />
+//
+// A snippet that builds on earlier code can import it from a companion file
+// instead of repeating it. The companion stays out of the editor, but the
+// editor type-checks against it and Run executes it:
+//   import timer from '../../sandbox/timer.ts?raw';
+//   <TsSandbox id="transitions" code={snippet} files={{ 'timer.ts': timer }} />
+//   // and the snippet starts with: import { transition } from './timer';
 //
 // Examples live in src/sandbox, which tsconfig excludes so an example that
 // intentionally fails to type-check does not fail `astro check`.
@@ -18,27 +26,42 @@ import { siteConfig } from './site-config';
 import './ts-sandbox.css';
 
 interface Props {
-  /** Unique on the page. Names the editor's virtual file and the element ids. */
+  /** Unique on the page. Names the editor's virtual folder and the element ids. */
   id: string;
   /** TypeScript source. Shown as static code first, then loaded into the editor. */
   code: string;
   /** Label shown in the toolbar and read to assistive technology. */
   title?: string;
+  /** Companion files the snippet may import, keyed by file name, e.g. { 'timer.ts': source }. */
+  files?: Record<string, string>;
 }
 
-const { id, code, title = 'TypeScript example' } = Astro.props;
+const { id, code, title = 'TypeScript example', files } = Astro.props;
 const source = code.replace(/\r\n/g, '\n').replace(/\s+$/, '');
 const slug = id.replace(/[^a-zA-Z0-9_-]/g, '-');
 const titleId = `ts-sandbox-${slug}-title`;
 const statusId = `ts-sandbox-${slug}-status`;
+const companions = files ? Object.keys(files) : [];
 ---
 
-<div class="ts-sandbox" data-ts-sandbox data-sandbox-id={slug} data-title={title} data-source={source}>
+<div
+  class="ts-sandbox"
+  data-ts-sandbox
+  data-sandbox-id={slug}
+  data-title={title}
+  data-source={source}
+  data-files={files ? JSON.stringify(files) : undefined}
+>
   <div class="ts-sandbox__toolbar">
     <span class="ts-sandbox__title" id={titleId}>{title}</span>
-    <span class="ts-sandbox__meta">TypeScript {TS_VERSION} · strict</span>
+    <span class="ts-sandbox__meta">
+      TypeScript {TS_VERSION} · strict{companions.length > 0 && ` · with ${companions.join(', ')}`}
+    </span>
     <button type="button" class="ts-sandbox__button" data-action="edit" aria-describedby={statusId}>
       Edit this code
+    </button>
+    <button type="button" class="ts-sandbox__button ts-sandbox__button--run" data-action="run" aria-describedby={statusId}>
+      Run
     </button>
     <button type="button" class="ts-sandbox__button" data-action="reset" hidden>Reset code</button>
   </div>
@@ -51,9 +74,18 @@ const statusId = `ts-sandbox-${slug}-status`;
 
   <p class="ts-sandbox__status" id={statusId} data-status role="status" aria-live="polite"></p>
   <ol class="ts-sandbox__diagnostics" data-diagnostics aria-label="Type errors" hidden></ol>
+
+  <section class="ts-sandbox__output" data-output aria-label="Program output" hidden>
+    <div class="ts-sandbox__output-head">
+      <span class="ts-sandbox__output-label">Output</span>
+      <span class="ts-sandbox__output-status" data-run-status role="status" aria-live="polite"></span>
+    </div>
+    <pre class="ts-sandbox__output-lines" data-output-lines aria-live="polite"></pre>
+  </section>
+
   <p class="ts-sandbox__hint" data-hint hidden>
-    Tab indents inside the editor. Press Ctrl+M (macOS: Ctrl+Shift+M) to make Tab move focus instead.
-    Reset is undoable with Ctrl+Z or ⌘Z.
+    Ctrl+Enter or ⌘Enter runs the code. Tab indents inside the editor; press Ctrl+M (macOS: Ctrl+Shift+M)
+    to make Tab move focus instead. Reset is undoable with Ctrl+Z or ⌘Z.
   </p>
 </div>
 

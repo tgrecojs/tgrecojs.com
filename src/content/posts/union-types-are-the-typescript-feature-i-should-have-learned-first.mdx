@@ -13,6 +13,10 @@ canonical: "https://blog.hindleymilner.com/blog/union-types-are-the-typescript-f
 
 {/* Mirrored from hindleymilner.com by scripts/mirror-hm.mjs. Edit the original in hm-blog, then run `npm run mirror`. */}
 
+import TsSandbox from '../../components/ts-sandbox/TsSandbox.astro';
+import contactOptionalFields from '../../sandbox/contact-optional-fields.ts?raw';
+import contactRequiredCases from '../../sandbox/contact-required-cases.ts?raw';
+import contactExhaustiveSwitch from '../../sandbox/contact-exhaustive-switch.ts?raw';
 
 For years, I was firmly in the JavaScript > TypeScript camp. Prototypal inheritance and sweet, sweet object composition gave me plenty to work with. After using TypeScript professionally, I've come to appreciate its expressivity, especially when it comes to describing which states a system should allow.
 
@@ -30,14 +34,7 @@ The `UserId` union has the members `string` and `number`.
 
 That gets more interesting when we’re working with objects. Say **a user must provide an email address, a phone number, or both**.[^contact] We might start by making both fields optional.
 
-```ts
-type ContactDetails = {
-  email?: string;
-  phoneNumber?: string;
-};
-
-const contact: ContactDetails = {};
-```
+<TsSandbox id="contact-optional-fields" title="Optional fields" code={contactOptionalFields} />
 
 This compiles. But with `email` and `phoneNumber` both optional, we've also allowed a user to provide neither.
 
@@ -84,10 +81,7 @@ Both require an email address, so TypeScript knows we can read `contact.email` i
 
 With the new `ContactDetails` definition, the empty object from our first example is a type error:
 
-```ts
-const contact: ContactDetails = {};
-// Error: Type '{}' is not assignable to type 'ContactDetails'.
-```
+<TsSandbox id="contact-required-cases" title="Required cases" code={contactRequiredCases} />
 
 We now have to choose **one of the three cases** and **provide the fields it requires**.
 
@@ -95,22 +89,7 @@ We now have to choose **one of the three cases** and **provide the fields it req
 
 We can also handle each member separately. For example, a user profile could display a contact summary:
 
-```ts
-const describeContact = (contact: ContactDetails): string => {
-  switch (contact.kind) {
-    case 'email':
-      return `Email: ${contact.email}`;
-    case 'phone':
-      return `Phone: ${contact.phoneNumber}`;
-    case 'both':
-      return `Email: ${contact.email}, phone: ${contact.phoneNumber}`;
-    default: {
-      const unreachable: never = contact;
-      return unreachable;
-    }
-  }
-};
-```
+<TsSandbox id="contact-exhaustive-switch" title="Exhaustive switch" code={contactExhaustiveSwitch} />
 
 Each branch handles one member of the union. After all three, the assignment to `never` checks that no case remains. This is an [exhaustiveness check](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking): add another member without handling it here, and TypeScript reports an error at that assignment.
 
