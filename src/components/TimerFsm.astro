@@ -1,0 +1,262 @@
+---
+// The timer from "Prevent Impossible States Pt. 2" as a live state diagram. The script
+// imports the post's own `transition` from src/sandbox/timer.ts, so the diagram runs the
+// exact function the reader has just read. Any event can be sent in any state; the ones
+// the rules don't allow leave the state unchanged, which is the point of the post.
+//
+// Shared by tgrecojs.com and hm-blog, like TrafficLightFsm: colours read tgrecojs's tokens
+// first and fall back to hm-blog's.
+interface Props {
+  caption?: string;
+}
+const {
+  caption = 'This runs the transition function from this post. Send an event the rules don’t allow, like pause while idle, and the state stays the same.',
+} = Astro.props;
+const uid = `timer-fsm-${Math.random().toString(36).slice(2, 8)}`;
+---
+
+<figure class="fsm" data-timer-fsm>
+  <div class="stage">
+    <svg class="graph" viewBox="0 0 440 300" role="img" aria-labelledby={`${uid}-title`}>
+      <title id={`${uid}-title`}>
+        Timer state diagram. start moves idle to running. tick keeps running, or moves it to finished on the last
+        second. pause moves running to paused, and resume moves paused back to running. reset moves any state to idle.
+      </title>
+
+      <g class="edge" data-edge="start">
+        <line x1="114" y1="142" x2="168" y2="142" pathLength="1"></line>
+        <polygon points="176,142 166,137 166,147"></polygon>
+        <text x="145" y="133" text-anchor="middle">start</text>
+      </g>
+      <g class="edge" data-edge="pause">
+        <line x1="258" y1="128" x2="327.2" y2="86.1" pathLength="1"></line>
+        <polygon points="334,82 328,91.5 322.8,82.9"></polygon>
+        <text x="289" y="94" text-anchor="end">pause</text>
+      </g>
+      <g class="edge" data-edge="resume">
+        <line x1="352" y1="82" x2="282.8" y2="123.9" pathLength="1"></line>
+        <polygon points="276,128 287.2,127.1 282,118.5"></polygon>
+        <text x="322" y="121">resume</text>
+      </g>
+      <g class="edge" data-edge="tick">
+        <path d="M 196 130 C 182 94, 240 94, 229 122" pathLength="1"></path>
+        <polygon points="226.4,128.5 234.8,121 225.4,117.4"></polygon>
+        <text x="211" y="90" text-anchor="middle">tick</text>
+      </g>
+      <g class="edge" data-edge="tick-last">
+        <line x1="258" y1="172" x2="327.2" y2="213.9" pathLength="1"></line>
+        <polygon points="334,218 328,208.5 322.8,217.1"></polygon>
+        <text x="289" y="210" text-anchor="end">tick, 1s left</text>
+      </g>
+      <g class="edge dashed" data-edge="reset-running">
+        <line x1="176" y1="158" x2="122" y2="158"></line>
+        <polygon points="114,158 124,153 124,163"></polygon>
+        <text x="145" y="177" text-anchor="middle">reset</text>
+      </g>
+      <g class="edge dashed" data-edge="reset-paused">
+        <path d="M 326 52 C 230 8, 80 14, 63 120"></path>
+        <polygon points="61.7,127.9 68.2,118.8 58.3,117.2"></polygon>
+        <text x="165" y="22" text-anchor="middle">reset</text>
+      </g>
+      <g class="edge dashed" data-edge="reset-finished">
+        <path d="M 326 248 C 230 292, 80 290, 63 180"></path>
+        <polygon points="61.8,172.1 68.2,181.2 58.4,182.8"></polygon>
+        <text x="165" y="292" text-anchor="middle">reset</text>
+      </g>
+
+      <g class="node active" data-node="idle" style="--fill: #b4bdcc">
+        <rect x="8" y="130" width="104" height="40" rx="20"></rect>
+        <text x="60" y="150">idle</text>
+      </g>
+      <g class="node" data-node="running" style="--fill: #3fbf7f">
+        <rect x="178" y="130" width="104" height="40" rx="20"></rect>
+        <text x="230" y="150">running</text>
+      </g>
+      <g class="node" data-node="paused" style="--fill: #f4b829">
+        <rect x="328" y="40" width="104" height="40" rx="20"></rect>
+        <text x="380" y="60">paused</text>
+      </g>
+      <g class="node" data-node="finished" style="--fill: #76a0e2">
+        <rect x="328" y="220" width="104" height="40" rx="20"></rect>
+        <text x="380" y="240">finished</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="bar">
+    <div class="readout" data-readout aria-live="off">
+      <p data-step>Send an event</p>
+      <p class="shape" data-shape>{"{ status: 'idle' }"}</p>
+    </div>
+    <div class="controls" role="group" aria-label="Send an event">
+      <button type="button" data-event="start">start</button>
+      <button type="button" data-event="pause">pause</button>
+      <button type="button" data-event="resume">resume</button>
+      <button type="button" data-event="tick">tick</button>
+      <button type="button" data-event="reset">reset</button>
+      <button type="button" class="play" data-play>Pause demo</button>
+    </div>
+  </div>
+  <figcaption class="figcap">{caption}</figcaption>
+</figure>
+
+<style>
+  .fsm {
+    --fsm-ink: var(--ink, var(--text-primary, #111));
+    --fsm-ink-2: var(--ink-2, var(--text-secondary, #555));
+    --fsm-edge: var(--ink-3, var(--text-secondary, #666));
+    --fsm-accent: var(--accent, var(--logic-blue, #2f55d4));
+    --fsm-mono: var(--f-mono, var(--font-mono, ui-monospace, monospace));
+    margin: 2rem 0;
+    max-width: none;
+  }
+  .stage {
+    display: flex; justify-content: center; padding: 1.25rem 1rem;
+    border: 1.5px solid var(--fsm-ink); border-radius: 6px; box-shadow: 3px 3px 0 var(--shadow, transparent);
+  }
+  .graph { width: 100%; max-width: 480px; height: auto; overflow: visible; }
+
+  .node rect { fill: none; stroke: var(--fsm-edge); stroke-width: 1.5; transition: fill 160ms ease-out, stroke 160ms ease-out; }
+  .node text { fill: var(--fsm-ink-2); font: 500 14px/1 var(--fsm-mono); text-anchor: middle; dominant-baseline: central; }
+  .node.active rect { fill: var(--fill); stroke: var(--fsm-ink); }
+  /* Dark text on every fill, in both themes: all four fills are light enough for it. */
+  .node.active text { fill: #0f1726; font-weight: 600; }
+  /* A disallowed event: the active state shakes once and stays put. */
+  .node.refused { animation: fsm-refuse 320ms cubic-bezier(.2, 0, 0, 1); transform-box: fill-box; transform-origin: center; }
+  @keyframes fsm-refuse { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+
+  .edge line, .edge path { fill: none; stroke: var(--fsm-edge); stroke-width: 1.5; }
+  .edge.dashed line, .edge.dashed path { stroke-dasharray: 5 4; }
+  .edge polygon { fill: var(--fsm-edge); }
+  .edge text { fill: var(--fsm-ink-2); font: 500 12px/1 var(--fsm-mono); }
+  .edge.taken line, .edge.taken path { stroke: var(--fsm-accent); stroke-width: 2.5; }
+  .edge.taken:not(.dashed) line, .edge.taken:not(.dashed) path { stroke-dasharray: 1; animation: fsm-draw 320ms cubic-bezier(.2, 0, 0, 1); }
+  .edge.taken polygon, .edge.taken text { fill: var(--fsm-accent); }
+  @keyframes fsm-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+  /* The SVG shrinks to ~70% on a phone; larger user-unit sizes keep labels near 11–12px on screen. */
+  @media (max-width: 480px) {
+    .edge text { font-size: 15px; }
+    .node text { font-size: 17px; }
+  }
+
+  .bar { display: grid; gap: .75rem; margin-top: .75rem; }
+  .readout p { margin: 0; font: 500 .8125rem/1.5 var(--fsm-mono); color: var(--fsm-ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .readout .shape { font-size: .75rem; color: var(--fsm-ink); }
+  .controls { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .controls button {
+    min-height: 44px; padding: 0 .9rem; border: 1.5px solid var(--fsm-ink); border-radius: 999px;
+    background: none; color: var(--fsm-ink); font: 500 .8125rem/1 var(--fsm-mono); cursor: pointer;
+  }
+  .controls .play { margin-inline-start: auto; border-style: dashed; }
+  .controls button:hover { border-color: var(--fsm-accent); color: var(--fsm-accent); }
+  .controls button:focus-visible { outline: 2px solid var(--fsm-accent); outline-offset: 3px; }
+  .figcap { margin-top: .6rem; font: 500 .75rem/1.45 var(--fsm-mono); letter-spacing: .02em; color: var(--fsm-ink-2); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .node rect { transition: none; }
+    .node.refused, .edge.taken:not(.dashed) line, .edge.taken:not(.dashed) path { animation: none; }
+  }
+</style>
+
+<script>
+  import { transition, type TimerEvent, type TimerState } from '../sandbox/timer';
+
+  const START: TimerEvent = { type: 'start', durationSeconds: 3 };
+
+  // The autoplay demo: one full run, including two events the rules ignore.
+  const demo: TimerEvent[] = [
+    { type: 'pause' }, // idle ignores pause
+    START,
+    { type: 'tick' },
+    { type: 'pause' },
+    { type: 'tick' }, // paused ignores tick
+    { type: 'resume' },
+    { type: 'tick' },
+    { type: 'tick' }, // the last second: finished
+    { type: 'reset' },
+  ];
+  const STEP_MS = 1600;
+
+  const shape = (s: TimerState) =>
+    'remainingSeconds' in s ? `{ status: '${s.status}', remainingSeconds: ${s.remainingSeconds} }` : `{ status: '${s.status}' }`;
+
+  // Which arrow a step took, or null when the state didn't change.
+  const edgeFor = (from: TimerState, event: TimerEvent, to: TimerState) =>
+    shape(from) === shape(to)
+      ? null
+      : event.type === 'reset'
+        ? `reset-${from.status}`
+        : event.type === 'tick'
+          ? to.status === 'finished' ? 'tick-last' : 'tick'
+          : event.type;
+
+  for (const root of document.querySelectorAll<HTMLElement>('[data-timer-fsm]')) {
+    const readout = root.querySelector<HTMLElement>('[data-readout]')!;
+    const stepLine = root.querySelector<HTMLElement>('[data-step]')!;
+    const shapeLine = root.querySelector<HTMLElement>('[data-shape]')!;
+    const playButton = root.querySelector<HTMLButtonElement>('[data-play]')!;
+    const nodes = [...root.querySelectorAll<SVGGElement>('[data-node]')];
+    const edges = [...root.querySelectorAll<SVGGElement>('[data-edge]')];
+
+    let state: TimerState = { status: 'idle' };
+    let next = 0;
+    let playing = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let timer: number | undefined;
+
+    const onScreen = () => {
+      const box = root.getBoundingClientRect();
+      return box.bottom > 0 && box.top < innerHeight;
+    };
+
+    // Restart a CSS animation by removing its class, forcing a reflow, and adding it back.
+    const replay = (el: Element, cls: string) => {
+      el.classList.remove(cls);
+      void el.getBoundingClientRect();
+      el.classList.add(cls);
+    };
+
+    const send = (event: TimerEvent, manual: boolean) => {
+      const from = state;
+      state = transition(from, event);
+      const edge = edgeFor(from, event, state);
+
+      readout.setAttribute('aria-live', manual ? 'polite' : 'off');
+      stepLine.textContent = `${from.status} + ${event.type} → ${state.status}${edge ? '' : ' (unchanged)'}`;
+      shapeLine.textContent = shape(state);
+
+      for (const node of nodes) node.classList.toggle('active', node.dataset.node === state.status);
+      for (const e of edges) e.classList.remove('taken');
+      const taken = edges.find((e) => e.dataset.edge === edge);
+      if (taken) replay(taken, 'taken');
+      else replay(nodes.find((n) => n.dataset.node === state.status)!, 'refused');
+    };
+
+    const schedule = () => {
+      clearTimeout(timer);
+      timer = playing && !document.hidden
+        ? window.setTimeout(() => {
+            if (onScreen()) {
+              send(demo[next], false);
+              next = (next + 1) % demo.length;
+            }
+            schedule();
+          }, STEP_MS)
+        : undefined;
+    };
+
+    const setPlaying = (on: boolean) => {
+      playing = on;
+      playButton.textContent = on ? 'Pause demo' : 'Play demo';
+      schedule();
+    };
+
+    for (const button of root.querySelectorAll<HTMLButtonElement>('[data-event]')) {
+      const type = button.dataset.event as TimerEvent['type'];
+      const event: TimerEvent = type === 'start' ? START : ({ type } as TimerEvent);
+      button.addEventListener('click', () => { setPlaying(false); send(event, true); });
+    }
+    playButton.addEventListener('click', () => setPlaying(!playing));
+    document.addEventListener('visibilitychange', schedule);
+    setPlaying(playing);
+  }
+</script>

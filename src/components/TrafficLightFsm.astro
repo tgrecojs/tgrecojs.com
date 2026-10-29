@@ -122,6 +122,11 @@ const uid = `fsm-${Math.random().toString(36).slice(2, 8)}`;
   .edge.taken line { stroke: var(--fsm-accent); stroke-width: 2.5; stroke-dasharray: 1; animation: fsm-draw 320ms cubic-bezier(.2, 0, 0, 1); }
   .edge.taken polygon, .edge.taken text { fill: var(--fsm-accent); }
   @keyframes fsm-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+  /* The SVG shrinks to ~85% on a phone; larger user-unit sizes keep labels near 12px on screen. */
+  @media (max-width: 480px) {
+    .edge text { font-size: 14px; }
+    .node text { font-size: 17px; }
+  }
 
   .bar { display: flex; align-items: center; justify-content: space-between; gap: .75rem 1rem; flex-wrap: wrap; margin-top: .75rem; }
   .readout { margin: 0; font: 500 .8125rem/1.4 var(--fsm-mono); color: var(--fsm-ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }

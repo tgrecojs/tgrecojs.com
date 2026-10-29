@@ -19,6 +19,7 @@ import timerStateShapes from '../../sandbox/timer-state-shapes.ts?raw';
 import timerTransitions from '../../sandbox/timer-transitions.ts?raw';
 import timer from '../../sandbox/timer.ts?raw';
 import TrafficLightFsm from '../../components/TrafficLightFsm.astro';
+import TimerFsm from '../../components/TimerFsm.astro';
 
 This post builds on discriminated unions. They let us describe valid state shapes, but on their own, they don't define which state transitions are valid.
 
@@ -43,6 +44,8 @@ Below we have the events and their corresponding state transitions:
 | Reset | any state | `idle` |
 
 The impact of an event depends on the current state. Dispatching a `start` event to an `idle` timer moves its status to `running`. A `pause` event moves a running timer to `paused`.
+
+<TimerFsm />
 
 ## Defining states and events
 

@@ -5,8 +5,8 @@ pubDate: 2026-10-29
 tags: ["typescript", "react", "state-machines", "series"]
 series: "Impossible States"
 seriesOrder: 3
-draft: true
-minutesRead: 6
+draft: false
+minutesRead: 4
 ---
 
 import TsSandbox from '../../components/ts-sandbox/TsSandbox.astro';
@@ -17,13 +17,11 @@ import timer from '../../sandbox/timer.ts?raw';
 
 In [Part 2](/posts/prevent-impossible-states-pt-2-state-transitions), we defined our timer's states and transitions. Now let's use that same model to build a React UI.
 
-When someone first opens the timer, it's idle. They should only see the option to start it. There isn't a running timer to pause or anything to reset. The controls we offer should follow the timer's current state.
+When someone first opens the timer, it's `idle`. They should only see the option to start it. There isn't a running timer to pause or anything to reset. The controls we offer should follow the timer's current state.
 
 ## Connecting the timer to React
 
 Our transition function already takes a state and an event and returns the next state. React's [useReducer](https://react.dev/reference/react/useReducer) lets us reuse that function: React holds the current state, and we send events using `dispatch`.
-
-When someone clicks Start, we send a `start` event with `durationSeconds: 30`. Our transition function returns a state with `status: 'running'` and `remainingSeconds: 30`. React then renders the UI with that state.
 
 Using the types and transition function from Part 2 in a module called `timer.ts`, we can connect our first button:
 
@@ -51,13 +49,11 @@ const Timer = () => {
 };
 ```
 
-For now, starting the timer changes the displayed status and removes the Start button. The transition rules still live in `transition`; the click handler only sends the event.
+Starting the timer changes the displayed status and removes the Start button. The click handler only sends the event; the transition rules stay in `transition`.
 
 ## Rendering the controls for each state
 
-Now that the timer has started, we can give the user the option to pause or reset it. When it's paused, they can resume or reset it. Once it's finished, they can reset it to start again.
-
-The `reset` event returns the timer to `idle`, discarding any remaining time. Our transition function accepts that event in every state, but we don't need to offer a Reset button while the timer is already idle.
+The `reset` event is valid in every state, but we don't need to offer a Reset button while the timer is already `idle`.
 
 We can use a `TimerView` component to render the controls for each status:
 
@@ -70,7 +66,7 @@ We can use a `TimerView` component to render the controls for each status:
 
 ### Catching a missing view
 
-What if we forget to handle the paused state? We can use the same [exhaustiveness check](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking) we used in our transition function. Here's a shorter view that returns status text, with the `paused` case deliberately left out:
+What if we forget to handle the `paused` state? We can use the same [exhaustiveness check](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking) we used in our transition function. Here's a shorter view that returns status text, with the `paused` case deliberately left out:
 
 <TsSandbox id="timer-view-exhaustiveness" title="A missing paused view" code={timerViewExhaustiveness} files={{ 'timer.ts': timer }} />
 
@@ -163,15 +159,11 @@ export const Timer = () => {
 };
 ```
 
-We're using our state machine to deterministically render the UI: given the same timer state, this component renders the same controls. We don't need separate state variables to track whether Pause or Resume should appear. The `never` check also means that adding a new status without a matching view produces a type error.
+We're using our state machine to deterministically render the UI, so we don't need separate state variables to track whether Pause or Resume should appear.
 
 ## Sending events from the UI
 
 Our transition function is our API for managing the timer's state. The button handlers send events to it, rather than deciding the next state themselves. This keeps our transition rules separate from our view logic: the view takes the resulting state and renders the appropriate controls.
-
-If someone clicks Pause with 20 seconds remaining, we send a `pause` event. Our transition function returns a state with `status: 'paused'` and `remainingSeconds: 20`.
-
-React renders the paused view, giving the user the option to resume or reset. We haven't changed the remaining time; we've changed the timer's status and, with it, the controls the user sees.
 
 To advance the timer in this example, add a manual Tick button alongside Pause and Reset in the `running` case:
 
@@ -181,11 +173,9 @@ To advance the timer in this example, add a manual Tick button alongside Pause a
 
 Each click sends one `tick` event. We're advancing the timer ourselves here; there's no clock running in the background.
 
-When a running timer has one second left, the next tick returns `{ status: 'finished' }`. That state doesn't contain `remainingSeconds`. Our view displays "Timer finished" and offers Reset. Reset returns the timer to `idle`, where the user can start again.
+When a running timer has one second left, the next tick returns `{ status: 'finished' }`, which has no `remainingSeconds`, so the view offers only Reset.
 
-The `case 'finished': return state` in our transition function handles events received after the timer has finished. It leaves the finished state unchanged. Reset still works because we handle that event before the status switch.
-
-The UI only offers actions appropriate to its current state, but other code can still send an event. If `pause` arrives while the timer is idle, our transition function intentionally leaves the state unchanged.
+The UI only offers actions appropriate to its current state, but other code can still send an event. If `pause` arrives while the timer is `idle`, our transition function intentionally leaves the state unchanged.
 
 ## Adding more timers
 
@@ -223,10 +213,8 @@ export const Timers = () => {
 
 The parent keeps track of which timers exist. Each timer keeps track of its own status and remaining time. We create each ID when the user clicks the button and keep it as a [stable key](https://react.dev/learn/rendering-lists#keeping-list-items-in-order-with-key), so React can identify the existing timers when we add another one.
 
-Try creating two timers, starting both, and pausing or resetting just one. The other timer should keep its state. Both use the same transition function and view; we added list-management code without rewriting the timer rules.
+Try creating two timers, starting both, and pausing or resetting just one. The other timer should keep its state.
 
 ## The lesson
 
-Our UI stays in sync with our timer's state because that's what determines the controls we render. A paused timer offers Resume and Reset, and each timer widget manages its state independently.
-
-We've kept the transition rules separate from the view and reused both to support multiple timers. The exhaustiveness check catches missing state cases; we still need to check that each view offers the controls we intended.
+Our UI stays in sync with our timer's state because that's what determines the controls we render. A paused timer offers Resume and Reset, and each timer widget manages its state independently. The exhaustiveness check catches missing state cases, but we still need to check that each view offers the controls we intended.
