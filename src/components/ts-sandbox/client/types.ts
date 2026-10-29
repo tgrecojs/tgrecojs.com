@@ -125,8 +125,8 @@ export interface TsNamespace {
   flattenDiagnosticMessageText(message: string | TsMessageChain | undefined, newLine: string): string;
   transpileModule(
     input: string,
-    options: { compilerOptions: Record<string, unknown>; fileName?: string },
-  ): { outputText: string };
+    options: { compilerOptions: Record<string, unknown>; fileName?: string; reportDiagnostics?: boolean },
+  ): { outputText: string; diagnostics?: TsDiagnostic[] };
 }
 
 export interface TsWorkerClient {

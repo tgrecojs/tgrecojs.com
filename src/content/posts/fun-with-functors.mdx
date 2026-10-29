@@ -6,12 +6,16 @@ tags: ["javascript", "functional-programming", "functors"]
 minutesRead: 5
 ---
 
+import FunctorLaws from '../../components/functor-laws/FunctorLaws.astro';
+
 {/* First published 1 May 2018 on tgreco.xyz (Vercel: tgreco-xyz-blog-9xnft76mp-thomasgreco.vercel.app/posts/firstpost/). */}
 
 {/* Light edit of the 2018 original. Changes: typos and grammar, variable names in prose
     now match the code, the composition example uses `data` instead of the undefined
     `functor`, "4 values" corrected to one value, the social-share sign-off dropped.
-    The Box snippet is reconstructed: the original page cuts off before it. Check it. */}
+    The Box snippet is reconstructed: the original page cuts off before it. Check it.
+    Oct 29 2026: laws and the Box arrow set as math, associativity reworded (grouping,
+    not order), composition bullet tied to the map law the code tests, law checker added. */}
 
 ## Intro
 
@@ -31,9 +35,9 @@ Above we see the `exampleFunctor` variable being set to an array, or a container
 
 Hopefully, by now you're beginning to cozy up to the complex terminology used in FP. The goal for this article (and every article I write focused on teaching concepts) is essentially the same: to remove the confusion that stems from FP's terminology. JavaScript's `Array` type is a functor.
 
-```
-[Box of `a`s] ------> [Box of `b`s]
-```
+$$
+\mathrm{Box}(a) \xrightarrow{\ \mathrm{map}(f)\ } \mathrm{Box}(b)
+$$
 
 ### Testing `map`
 
@@ -55,16 +59,26 @@ The two functor laws are:
 
 - **Identity**: the `id` function must always `map` a functor back to the **same value**.
 
+  $$
+  \mathrm{map}(\mathrm{id}) = \mathrm{id}
+  $$
+
   ```js
   const id = (x) => x;
   [1, 2, 3].map(id); // returns [1,2,3]
   ```
 
-- **Composition**: given `g: x => y` and `f: y => z`, **there must be a composition that goes directly `x → z`**.
+- **Composition**: given `g: x => y` and `f: y => z`, **there must be a composition that goes directly `x → z`**. Mapping `g` and then `f` gives the same result as mapping their composition once.
 
-This composition law is the same one I was forced to learn in algebra class. It's associative, meaning that the order in which it is computed does not matter. Realizing this was a big "a-ha" moment when studying functional programming.
+  $$
+  \mathrm{map}(f \circ g) = \mathrm{map}(f) \circ \mathrm{map}(g)
+  $$
 
-Ex.: (f ∘ g) ∘ h = f ∘ g ∘ h = f ∘ (g ∘ h)
+This composition law is the same one I was forced to learn in algebra class. It's associative, meaning that how we group the functions doesn't change the result. Realizing this was a big "a-ha" moment when studying functional programming.
+
+$$
+(f \circ g) \circ h = f \circ g \circ h = f \circ (g \circ h)
+$$
 
 Now that we know the functor laws, let's apply them to another array. Below we have the following:
 
@@ -106,3 +120,13 @@ Box(10)
   .map((x) => x + 1)
   .fold(console.log); // 21
 ```
+
+<FunctorLaws />
+
+## What's the point?
+
+{/* Your notes from Oct 29, kept in your words. Rewrite as you like. The second sentence
+    points at posts that don't exist yet, which your no-teasers rule says to avoid;
+    cut it or swap in a link once the follow-up is live. */}
+
+We just saw how we can encapsulate data inside of a generic data type. In future posts, we'll look at extending this.

@@ -18,12 +18,19 @@ export const CHECK_DEBOUNCE_MS = 250;
 // the Monaco bundle, which is not loaded when this module is evaluated.
 // `moduleDetection: force` (3) makes every editor its own module, so two
 // sandboxes on one page can each declare `TimerState` without a clash.
+//
+// Monaco keeps one set of compiler options for every editor on the page, so
+// TsSandbox and ReactSandbox share this object. `jsx: react-jsx` (4) and
+// `moduleResolution: bundler` (100) exist for ReactSandbox's .tsx editors,
+// which import `react` from a virtual node_modules/@types; neither changes
+// how a plain .ts editor is checked.
 export const compilerOptions = {
   strict: true,
   target: 99, // ScriptTarget.ESNext
   module: 99, // ModuleKind.ESNext
+  moduleResolution: 100, // ModuleResolutionKind.Bundler
   moduleDetection: 3, // ModuleDetectionKind.Force
-  jsx: 0, // JsxEmit.None
+  jsx: 4, // JsxEmit.ReactJSX
   esModuleInterop: true,
   skipLibCheck: true,
   declaration: false,

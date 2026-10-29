@@ -10,8 +10,15 @@ minutesRead: 4
 ---
 
 import TsSandbox from '../../components/ts-sandbox/TsSandbox.astro';
+import ReactSandbox from '../../components/ts-sandbox/ReactSandbox.astro';
 import timerViewExhaustiveness from '../../sandbox/timer-view-exhaustiveness.ts?raw';
 import timer from '../../sandbox/timer.ts?raw';
+import timerStartButton from '../../sandbox/timer-start-button.tsx?raw';
+import timerView from '../../sandbox/timer-view.tsx?raw';
+import timerComponent from '../../sandbox/timer-component.tsx?raw';
+import timerComponentReducer from '../../sandbox/timer-component-reducer.tsx?raw';
+import useTimer from '../../sandbox/use-timer.ts?raw';
+import timers from '../../sandbox/timers.tsx?raw';
 
 ## Introduction
 
@@ -25,31 +32,9 @@ Our transition function already takes a state and an event and returns the next 
 
 Using the types and transition function from Part 2 in a module called `timer.ts`, we can connect our first button:
 
-```tsx
-import { useReducer } from 'react';
-import { transition, type TimerState } from './timer';
+<ReactSandbox id="timer-start" title="Timer.tsx" file="Timer.tsx" code={timerStartButton} files={{ 'timer.ts': timer }} />
 
-const initialState: TimerState = { status: 'idle' };
-
-const Timer = () => {
-  const [state, dispatch] = useReducer(transition, initialState);
-
-  return (
-    <section>
-      <p>Status: {state.status}</p>
-      {state.status === 'idle' ? (
-        <button
-          onClick={() => dispatch({ type: 'start', durationSeconds: 30 })}
-        >
-          Start
-        </button>
-      ) : null}
-    </section>
-  );
-};
-```
-
-Starting the timer changes the displayed status and removes the Start button. The click handler only sends the event; the transition rules stay in `transition`.
+Starting the timer changes the displayed status and removes the Start button. The click handler only sends the event and the transition rules stay in `transition`.
 
 ## Rendering the controls for each state
 
@@ -91,73 +76,11 @@ This checks that we've handled every status. It doesn't check that we've include
 
 The full component uses that same check. In `TimerView.tsx`:
 
-```tsx
-import type { Dispatch } from 'react';
-import type { TimerEvent, TimerState } from './timer';
-
-type TimerViewProps = {
-  state: TimerState;
-  dispatch: Dispatch<TimerEvent>;
-};
-
-export const TimerView = ({ state, dispatch }: TimerViewProps) => {
-  switch (state.status) {
-    case 'idle':
-      return (
-        <button onClick={() => dispatch({ type: 'start', durationSeconds: 30 })}>
-          Start
-        </button>
-      );
-
-    case 'running':
-      return (
-        <section>
-          <p>Running: {state.remainingSeconds} seconds remaining</p>
-          <button onClick={() => dispatch({ type: 'pause' })}>Pause</button>
-          <button onClick={() => dispatch({ type: 'reset' })}>Reset</button>
-        </section>
-      );
-
-    case 'paused':
-      return (
-        <section>
-          <p>Paused: {state.remainingSeconds} seconds remaining</p>
-          <button onClick={() => dispatch({ type: 'resume' })}>Resume</button>
-          <button onClick={() => dispatch({ type: 'reset' })}>Reset</button>
-        </section>
-      );
-
-    case 'finished':
-      return (
-        <section>
-          <p>Timer finished</p>
-          <button onClick={() => dispatch({ type: 'reset' })}>Reset</button>
-        </section>
-      );
-
-    default: {
-      const unreachable: never = state;
-      return unreachable;
-    }
-  }
-};
-```
+<ReactSandbox id="timer-view" title="TimerView.tsx" file="TimerView.tsx" code={timerView} files={{ 'timer.ts': timer, 'Timer.tsx': timerComponentReducer }} render="Timer" renderFrom="Timer.tsx" />
 
 Our `Timer` component can now pass the current state and `dispatch` to that view. Replace its earlier implementation in `Timer.tsx` with:
 
-```tsx
-import { useReducer } from 'react';
-import { transition, type TimerState } from './timer';
-import { TimerView } from './TimerView';
-
-const initialState: TimerState = { status: 'idle' };
-
-export const Timer = () => {
-  const [state, dispatch] = useReducer(transition, initialState);
-
-  return <TimerView state={state} dispatch={dispatch} />;
-};
-```
+<ReactSandbox id="timer" title="Timer.tsx" file="Timer.tsx" code={timerComponentReducer} files={{ 'timer.ts': timer, 'TimerView.tsx': timerView }} />
 
 We're using our state machine to deterministically render the UI, so we don't need separate state variables to track whether Pause or Resume should appear.
 
@@ -165,51 +88,25 @@ We're using our state machine to deterministically render the UI, so we don't ne
 
 Our transition function is our API for managing the timer's state. The button handlers send events to it, rather than deciding the next state themselves. This keeps our transition rules separate from our view logic: the view takes the resulting state and renders the appropriate controls.
 
-To advance the timer in this example, add a manual Tick button alongside Pause and Reset in the `running` case:
+I've historically been very anti-`useEffect`. In production, I usually reach for a state management library, or avoid Effects altogether, to keep application logic separate from my view code. For this example, though, a small Effect isolated in a custom hook fits.
 
-```tsx
-<button onClick={() => dispatch({ type: 'tick' })}>Tick (advance one second)</button>
-```
+Right now the timer shows its remaining time but never counts down, so it needs a clock. We keep that subscription in a [custom hook](https://react.dev/learn/reusing-logic-with-custom-hooks), separate from the view. In `useTimer.ts`, `useReducer` manages the state, and `useEffect` sends a `tick` event every second while the status is `running`:
 
-Each click sends one `tick` event. We're advancing the timer ourselves here; there's no clock running in the background.
+<ReactSandbox id="timer-hook" title="useTimer.ts" file="useTimer.ts" code={useTimer} files={{ 'timer.ts': timer, 'TimerView.tsx': timerView, 'Timer.tsx': timerComponent }} render="Timer" renderFrom="Timer.tsx" />
 
-When a running timer has one second left, the next tick returns `{ status: 'finished' }`, which has no `remainingSeconds`, so the view offers only Reset.
+`Timer` now calls `useTimer()` where it called `useReducer` before. `TimerView` doesn't change. This Effect only [synchronizes with the browser clock](https://react.dev/learn/you-might-not-need-an-effect), so our rendering logic still derives directly from state. It depends on `state.status` and `dispatch`, so updating `remainingSeconds` doesn't restart the interval. Because it counts interval callbacks, it can drift from wall-clock time.
+
+When a running timer has one second left, the next `tick` returns `{ status: 'finished' }`, which has no `remainingSeconds`, so the view offers only Reset.
 
 The UI only offers actions appropriate to its current state, but other code can still send an event. If `pause` arrives while the timer is `idle`, our transition function intentionally leaves the state unchanged.
 
 ## Adding more timers
 
-We can take this a step further and let the user create multiple timer widgets. Each `Timer` calls `useReducer`, so [each instance has its own state](https://react.dev/learn/preserving-and-resetting-state). Pausing or resetting one timer doesn't change another timer's state.
+We can take this a step further and let the user create multiple timer widgets. Each `Timer` calls `useTimer`, so [each instance has its own state](https://react.dev/learn/preserving-and-resetting-state). Pausing or resetting one timer doesn't change another timer's state.
 
 In `Timers.tsx`:
 
-```tsx
-import { useState } from 'react';
-import { Timer } from './Timer';
-
-export const Timers = () => {
-  const [timerIds, setTimerIds] = useState<string[]>([]);
-
-  const createTimer = () => {
-    const id = crypto.randomUUID();
-    setTimerIds(ids => [...ids, id]);
-  };
-
-  return (
-    <section>
-      <button type="button" onClick={createTimer}>Create timer</button>
-      <ul>
-        {timerIds.map((id, index) => (
-          <li key={id}>
-            <h2>Timer {index + 1}</h2>
-            <Timer />
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-};
-```
+<ReactSandbox id="timers" title="Timers.tsx" file="Timers.tsx" code={timers} files={{ 'timer.ts': timer, 'TimerView.tsx': timerView, 'Timer.tsx': timerComponent, 'useTimer.ts': useTimer }} />
 
 The parent keeps track of which timers exist. Each timer keeps track of its own status and remaining time. We create each ID when the user clicks the button and keep it as a [stable key](https://react.dev/learn/rendering-lists#keeping-list-items-in-order-with-key), so React can identify the existing timers when we add another one.
 

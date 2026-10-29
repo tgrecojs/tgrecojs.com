@@ -95,14 +95,18 @@ export const runProgram = async (
   }
 };
 
-/** Points relative imports (`./timer`, `./timer.ts`) at the blob URLs of the companion files. */
-const rewriteImports = (js: string, moduleUrls: Record<string, string>) =>
+/**
+ * Points relative imports (`./timer`, `./timer.ts`) at replacement specifiers,
+ * keyed by file name without extension: blob URLs here, `sandbox:` names in
+ * the React preview.
+ */
+export const rewriteImports = (js: string, moduleUrls: Record<string, string>) =>
   js.replace(/(\bfrom\s*|\bimport\s*)(['"])(\.{1,2}\/[^'"]+)\2/g, (whole, lead: string, quote: string, spec: string) => {
     const url = moduleUrls[stripExtension(spec.replace(/^\.{1,2}\//, ''))];
     return url ? `${lead}${quote}${url}${quote}` : whole;
   });
 
-const stripExtension = (name: string) => name.replace(/\.(d\.ts|tsx?|m?js)$/, '');
+export const stripExtension = (name: string) => name.replace(/\.(d\.ts|tsx?|m?js)$/, '');
 
 const describeError = (error: unknown) => {
   if (error instanceof Error) return `${error.name}: ${error.message}`;

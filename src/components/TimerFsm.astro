@@ -143,17 +143,20 @@ const uid = `timer-fsm-${Math.random().toString(36).slice(2, 8)}`;
   .readout p { margin: 0; font: 500 .8125rem/1.5 var(--fsm-mono); color: var(--fsm-ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .readout .shape { font-size: .75rem; color: var(--fsm-ink); }
   .controls { display: flex; flex-wrap: wrap; gap: .5rem; }
+  /* Height and focus ring come from tgrecojs's control tokens; the fallbacks are the same values for hm-blog. */
   .controls button {
-    min-height: 44px; padding: 0 .9rem; border: 1.5px solid var(--fsm-ink); border-radius: 999px;
+    min-height: var(--control-h, 44px); padding: 0 .9rem; border: 1.5px solid var(--fsm-ink); border-radius: 999px;
     background: none; color: var(--fsm-ink); font: 500 .8125rem/1 var(--fsm-mono); cursor: pointer;
+    transition: border-color 150ms ease-out, color 150ms ease-out, transform 100ms ease-out;
   }
   .controls .play { margin-inline-start: auto; border-style: dashed; }
   .controls button:hover { border-color: var(--fsm-accent); color: var(--fsm-accent); }
-  .controls button:focus-visible { outline: 2px solid var(--fsm-accent); outline-offset: 3px; }
+  .controls button:active { transform: scale(.96); }
+  .controls button:focus-visible { outline: var(--focus-ring, 2px solid var(--fsm-accent)); outline-offset: var(--focus-offset, 2px); }
   .figcap { margin-top: .6rem; font: 500 .75rem/1.45 var(--fsm-mono); letter-spacing: .02em; color: var(--fsm-ink-2); }
 
   @media (prefers-reduced-motion: reduce) {
-    .node rect { transition: none; }
+    .node rect, .controls button { transition: none; }
     .node.refused, .edge.taken:not(.dashed) line, .edge.taken:not(.dashed) path { animation: none; }
   }
 </style>

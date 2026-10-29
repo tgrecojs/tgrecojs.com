@@ -1,0 +1,207 @@
+---
+// Pick a container and three functions, and watch both sides of each law compute.
+// Array and Box always pass; Counted is there to show what breaking the laws looks like.
+//
+// The pickers read like the post's own code (`const f = (x) => x / 0.5`), so the form
+// feels like part of the snippet above it rather than a settings panel.
+import { CONTAINERS, DEFAULT_PICKS, FUNCTIONS, INPUTS_BY_LAW, checkLaws, summarize, type Picks } from './laws';
+
+interface Props {
+  caption?: string;
+}
+const {
+  caption = 'Pick any f, g and h. Array and Box pass every time. Counted isn’t a functor: its map also counts calls, so it changes more than the value and breaks both functor laws. Associativity is about the functions alone, so it holds whatever the container.',
+} = Astro.props;
+
+const uid = `laws-${Math.random().toString(36).slice(2, 8)}`;
+const idFor = (key: keyof Picks) => `${uid}-${key}`;
+
+type Option = { value: string; label: string };
+const groups = (entries: [string, { label: string; group?: string }][]) =>
+  entries.reduce<{ label?: string; options: Option[] }[]>((acc, [value, { label, group }]) => {
+    const last = acc.at(-1);
+    last && last.label === group ? last.options.push({ value, label }) : acc.push({ label: group, options: [{ value, label }] });
+    return acc;
+  }, []);
+
+const pickers: { key: keyof Picks; name: string; groups: ReturnType<typeof groups> }[] = [
+  { key: 'container', name: 'data', groups: groups(Object.entries(CONTAINERS)) },
+  { key: 'f', name: 'f', groups: groups(Object.entries(FUNCTIONS)) },
+  { key: 'g', name: 'g', groups: groups(Object.entries(FUNCTIONS)) },
+  { key: 'h', name: 'h', groups: groups(Object.entries(FUNCTIONS)) },
+];
+const results = checkLaws(DEFAULT_PICKS);
+const allHold = results.every((r) => r.holds);
+---
+
+<figure class="laws" data-functor-laws>
+  <div class="panel">
+    <form class="pickers" data-pickers>
+      <fieldset>
+        <legend>Law checker</legend>
+        <div class="decls">
+          {
+            pickers.map((p) => (
+              <div class="decl">
+                <label for={idFor(p.key)}>
+                  <span class="kw" aria-hidden="true">const</span> {p.name} <span aria-hidden="true">=</span>
+                </label>
+                <span class="select">
+                  <select id={idFor(p.key)} data-pick={p.key}>
+                    {p.groups.map((g) => {
+                      const options = g.options.map((o) => (
+                        <option value={o.value} selected={o.value === DEFAULT_PICKS[p.key]}>{o.label}</option>
+                      ));
+                      return g.label ? <optgroup label={g.label}>{options}</optgroup> : options;
+                    })}
+                  </select>
+                </span>
+              </div>
+            ))
+          }
+        </div>
+      </fieldset>
+    </form>
+
+    <p class="summary" data-summary data-status={allHold ? 'pass' : 'fail'} aria-live="polite">
+      <span class="mark" aria-hidden="true">{allHold ? '✓' : '✗'}</span>
+      <span data-summary-text>{summarize(results)}</span>
+    </p>
+
+    <div class="results">
+      {
+        results.map((r, i) => {
+          const inputs = INPUTS_BY_LAW[i].map(idFor).join(' ');
+          return (
+            <div class="law" data-law>
+              <div class="law-head">
+                <p class="name">{r.name}</p>
+                <p class="verdict" data-verdict={r.holds ? 'pass' : 'fail'}>{r.holds ? '✓ equal' : '✗ not equal'}</p>
+              </div>
+              <div class="row">
+                <code>{r.left.expr}</code>
+                <output for={inputs} data-left>{r.left.value}</output>
+              </div>
+              <div class="row">
+                <code>{r.right.expr}</code>
+                <output for={inputs} data-right>{r.right.value}</output>
+              </div>
+            </div>
+          );
+        })
+      }
+    </div>
+  </div>
+  <figcaption class="figcap">{caption}</figcaption>
+</figure>
+
+<style>
+  .laws { margin: 2rem 0; max-width: none; }
+  .panel {
+    padding: 1.1rem 1.1rem 1.25rem; background: var(--paper);
+    border: var(--control-border); border-radius: var(--control-radius); box-shadow: 3px 3px 0 var(--shadow);
+  }
+
+  /* ─── The form: four declarations, aligned like a code block ─── */
+  fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+  legend { padding: 0; margin-bottom: .75rem; font: 500 .7rem/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+  .decls { display: grid; grid-template-columns: max-content minmax(0, 22rem); gap: .5rem .75rem; align-items: center; }
+  .decl { display: contents; }
+  label { font: 500 .9375rem/1 var(--f-mono); color: var(--ink); cursor: pointer; white-space: nowrap; }
+  .kw { color: var(--ink-3); }
+
+  .select { position: relative; display: block; }
+  /* The chevron sits on top of the select and lets clicks through to it. */
+  .select::after {
+    content: ''; position: absolute; top: 50%; right: .95rem; width: .45rem; height: .45rem;
+    border-right: 1.5px solid var(--ink-2); border-bottom: 1.5px solid var(--ink-2);
+    transform: translateY(-70%) rotate(45deg); pointer-events: none;
+  }
+  select {
+    appearance: none; width: 100%; min-height: var(--control-h); margin: 0; padding: 0 2.4rem 0 .75rem;
+    /* 16px so iOS Safari doesn't zoom the page on focus. */
+    font: 400 16px/1.2 var(--f-mono); color: var(--ink); background: var(--paper);
+    border: var(--control-border); border-radius: var(--control-radius); cursor: pointer;
+    text-overflow: ellipsis; transition: background-color 150ms ease-out;
+  }
+  select:hover { background: var(--paper-2); }
+  select:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+
+  /* ─── Status: one line that answers the question, then the working ─── */
+  .summary {
+    display: flex; align-items: center; gap: .6rem; margin: 1.1rem 0 0; padding: .65rem .8rem;
+    background: var(--paper-2); border-radius: var(--control-radius);
+    font: 600 .9375rem/1.3 var(--f-body); color: var(--ink);
+  }
+  /* Fixed fills with dark text read the same in both themes; the mark and words carry the meaning too. */
+  .mark { display: grid; place-items: center; flex: none; width: 1.4rem; height: 1.4rem; border-radius: 50%; font: 700 .8rem/1 var(--f-mono); color: #0f1726; }
+  .summary[data-status='pass'] .mark, .verdict[data-verdict='pass'] { background: #93d3b0; }
+  .summary[data-status='fail'] .mark, .verdict[data-verdict='fail'] { background: #ef6a4c; }
+
+  .results { display: grid; gap: .85rem; margin-top: .9rem; }
+  .law { padding-top: .8rem; border-top: 1px solid var(--rule); }
+  .law-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .3rem; }
+  .name { margin: 0; font: 600 .9375rem/1.3 var(--f-body); color: var(--ink); }
+  .verdict { margin: 0; padding: .3rem .6rem; border-radius: 999px; font: 600 .75rem/1 var(--f-mono); color: #0f1726; white-space: nowrap; }
+  .row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .15rem 1rem; padding-block: .15rem; }
+  .row code { padding: 0; background: none; font-size: .8125rem; color: var(--ink-2); }
+  .row output { padding: .05rem .3rem; margin-inline-end: -.3rem; border-radius: 3px; font: 500 .875rem/1.4 var(--f-mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+  /* A value that just changed tints briefly, so the eye finds what the pick affected. */
+  .row output.changed { animation: laws-changed 700ms ease-out; }
+  @keyframes laws-changed { from { background: color-mix(in oklch, var(--accent) 24%, transparent); } }
+
+  /* Phones: the select drops under its label once the pair no longer fits on a line. */
+  @media (max-width: 400px) {
+    .decls { grid-template-columns: minmax(0, 1fr); gap: .3rem; }
+    .decl + .decl label { margin-top: .45rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    select { transition: none; }
+    .row output.changed { animation: none; }
+  }
+</style>
+
+<script>
+  import { checkLaws, summarize, type Picks } from './laws';
+
+  for (const root of document.querySelectorAll<HTMLElement>('[data-functor-laws]')) {
+    const form = root.querySelector<HTMLFormElement>('[data-pickers]')!;
+    const selects = [...root.querySelectorAll<HTMLSelectElement>('[data-pick]')];
+    const laws = [...root.querySelectorAll<HTMLElement>('[data-law]')];
+    const summary = root.querySelector<HTMLElement>('[data-summary]')!;
+    const summaryText = root.querySelector<HTMLElement>('[data-summary-text]')!;
+    const summaryMark = summary.querySelector<HTMLElement>('.mark')!;
+
+    const setValue = (el: HTMLElement, value: string, flash: boolean) => {
+      if (el.textContent === value) return;
+      el.textContent = value;
+      if (!flash) return;
+      el.classList.remove('changed');
+      void el.offsetWidth; // restart the tint
+      el.classList.add('changed');
+    };
+
+    const render = (flash: boolean) => {
+      const picks = Object.fromEntries(selects.map((s) => [s.dataset.pick, s.value])) as unknown as Picks;
+      const results = checkLaws(picks);
+      results.forEach((r, i) => {
+        const law = laws[i];
+        setValue(law.querySelector('[data-left]')!, r.left.value, flash);
+        setValue(law.querySelector('[data-right]')!, r.right.value, flash);
+        const verdict = law.querySelector<HTMLElement>('[data-verdict]')!;
+        verdict.dataset.verdict = r.holds ? 'pass' : 'fail';
+        verdict.textContent = r.holds ? '✓ equal' : '✗ not equal';
+      });
+      const allHold = results.every((r) => r.holds);
+      summary.dataset.status = allHold ? 'pass' : 'fail';
+      summaryMark.textContent = allHold ? '✓' : '✗';
+      summaryText.textContent = summarize(results);
+    };
+
+    // Nothing to submit: every change re-checks the laws. Enter in a select shouldn't reload the page.
+    form.addEventListener('submit', (event) => event.preventDefault());
+    form.addEventListener('change', () => render(true));
+    // A back/forward navigation can restore earlier picks; match them on load, without the tint.
+    render(false);
+  }
+</script>

@@ -1,0 +1,118 @@
+---
+// ReactSandbox: TsSandbox for React. A static, Shiki-highlighted TSX block
+// that upgrades on demand into the same Monaco + TypeScript 5.9.3 editor, with
+// React's type definitions, and a live preview: Run mounts the component in a
+// sandboxed frame, clicks dispatch for real, and edits re-render the preview.
+// Nothing loads until the reader presses "Edit this code" or "Run": the editor
+// stack comes from the TypeScript CDN (shared with TsSandbox on the same
+// page), React 19 and its `.d.ts` files from jsDelivr, both pinned in
+// client/react/config.ts.
+//
+// Usage in MDX:
+//   import ReactSandbox from '../../components/ts-sandbox/ReactSandbox.astro';
+//   import timer from '../../sandbox/timer.ts?raw';
+//   import timerTsx from '../../sandbox/timer-component.tsx?raw';
+//   <ReactSandbox id="timer" file="Timer.tsx" code={timerTsx} files={{ 'timer.ts': timer }} />
+//
+// `file` names the edited file and, by default, the component to mount is the
+// export named after it (`Timer` from Timer.tsx). Companion files are listed
+// in `files` exactly as in TsSandbox; they can import the edited file too. To
+// edit one file but mount a component from another, say which:
+//   <ReactSandbox id="timer-view" file="TimerView.tsx" code={view}
+//     files={{ 'timer.ts': timer, 'Timer.tsx': timerTsx }} render="Timer" renderFrom="Timer.tsx" />
+//
+// The preview frame is `sandbox="allow-scripts"`: the reader's code runs in an
+// opaque origin and reaches the page only through postMessage. Examples live
+// in src/sandbox like TsSandbox's; tsconfig excludes that folder, so the .tsx
+// files there need no @types/react in the project.
+import { Code } from 'astro:components';
+import { TS_VERSION } from './client/config';
+import { REACT_VERSION } from './client/react/config';
+import { siteConfig } from './site-config';
+import './ts-sandbox.css';
+
+interface Props {
+  /** Unique on the page. Names the editor's virtual folder and the element ids. */
+  id: string;
+  /** TSX source of the edited file. Shown as static code first, then loaded into the editor. */
+  code: string;
+  /** Name of the edited file, e.g. "Timer.tsx". Companions import it by this name. */
+  file?: string;
+  /** Label shown in the toolbar and read to assistive technology. Defaults to the file name. */
+  title?: string;
+  /** Companion files, keyed by file name, e.g. { 'timer.ts': source, 'TimerView.tsx': view }. */
+  files?: Record<string, string>;
+  /** Exported component to mount in the preview. Defaults to the edited file's base name. */
+  render?: string;
+  /** File that exports it. Defaults to the edited file. */
+  renderFrom?: string;
+}
+
+const { id, code, file = 'App.tsx', title = file, files, renderFrom = file } = Astro.props;
+const render = Astro.props.render ?? file.replace(/\.[^.]+$/, '');
+const source = code.replace(/\r\n/g, '\n').replace(/\s+$/, '');
+const slug = id.replace(/[^a-zA-Z0-9_-]/g, '-');
+const titleId = `react-sandbox-${slug}-title`;
+const statusId = `react-sandbox-${slug}-status`;
+const companions = files ? Object.keys(files) : [];
+---
+
+<div
+  class="ts-sandbox ts-sandbox--react"
+  data-react-sandbox
+  data-sandbox-id={slug}
+  data-title={title}
+  data-file={file}
+  data-source={source}
+  data-files={files ? JSON.stringify(files) : undefined}
+  data-component={render}
+  data-entry-file={renderFrom}
+>
+  <div class="ts-sandbox__toolbar">
+    <span class="ts-sandbox__title" id={titleId}>{title}</span>
+    <span class="ts-sandbox__meta">
+      TypeScript {TS_VERSION} · React {REACT_VERSION} · strict{companions.length > 0 && ` · with ${companions.join(', ')}`}
+    </span>
+    <button type="button" class="ts-sandbox__button" data-action="edit" aria-describedby={statusId}>
+      Edit this code
+    </button>
+    <button type="button" class="ts-sandbox__button ts-sandbox__button--run" data-action="run" aria-describedby={statusId}>
+      Run
+    </button>
+    <button type="button" class="ts-sandbox__button" data-action="reset" hidden>Reset code</button>
+  </div>
+
+  <div class="ts-sandbox__static" data-static>
+    <Code code={source} lang="tsx" wrap {...siteConfig.shiki} />
+  </div>
+
+  <div class="ts-sandbox__editor" data-editor role="region" aria-labelledby={titleId} hidden></div>
+
+  <p class="ts-sandbox__status" id={statusId} data-status role="status" aria-live="polite"></p>
+  <ol class="ts-sandbox__diagnostics" data-diagnostics aria-label="Type errors" hidden></ol>
+
+  <section class="ts-sandbox__preview" data-preview aria-label={`Live preview of ${title}`} hidden>
+    <div class="ts-sandbox__output-head">
+      <span class="ts-sandbox__output-label">Preview</span>
+      <span class="ts-sandbox__output-status" data-preview-status role="status" aria-live="polite"></span>
+    </div>
+    <div class="ts-sandbox__preview-frame" data-preview-frame></div>
+  </section>
+
+  <section class="ts-sandbox__output" data-output aria-label="Console output" hidden>
+    <div class="ts-sandbox__output-head">
+      <span class="ts-sandbox__output-label">Console</span>
+      <span class="ts-sandbox__output-status" data-run-status role="status" aria-live="polite"></span>
+    </div>
+    <pre class="ts-sandbox__output-lines" data-output-lines aria-live="polite"></pre>
+  </section>
+
+  <p class="ts-sandbox__hint" data-hint hidden>
+    Ctrl+Enter or ⌘Enter renders the preview, and it re-renders as you type. Tab indents inside the editor; press
+    Ctrl+M (macOS: Ctrl+Shift+M) to make Tab move focus instead. Reset is undoable with Ctrl+Z or ⌘Z.
+  </p>
+</div>
+
+<script>
+  import './client/react/mount';
+</script>

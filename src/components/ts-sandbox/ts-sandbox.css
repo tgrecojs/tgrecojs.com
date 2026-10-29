@@ -10,11 +10,19 @@
   --tss-text: var(--text-primary, var(--ink, #15181f));
   --tss-muted: var(--text-muted, var(--ink-3, #5f6673));
   --tss-accent: var(--logic-blue, var(--accent, #2f55d4));
-  --tss-ok: var(--mint, var(--logic-blue, #2f8f5b));
   --tss-warn: var(--mustard, var(--logic-blue, #b7791f));
   --tss-error: var(--draft, #e5484d);
   --tss-mono: var(--font-mono, var(--f-mono, ui-monospace, Menlo, monospace));
-  --tss-radius: 6px;
+  --tss-body: var(--font-body, var(--f-body, system-ui, sans-serif));
+  --tss-display: var(--font-display, var(--f-display, Georgia, serif));
+  --tss-paper: var(--background, var(--paper, #ffffff));
+  --tss-radius: var(--control-radius, 6px);
+  /* tgrecojs.com's control tokens when present; the fallbacks are the same values for hm-blog. */
+  --tss-control-h: var(--control-h, 44px);
+  --tss-focus: var(--focus-ring, 2px solid var(--tss-accent));
+  /* Status marks: fixed fills under dark text read the same on light and dark pages. */
+  --tss-mark-ok: #93d3b0;
+  --tss-mark-error: #ef6a4c;
   margin: 1.5rem 0;
   min-width: 0;
   font-family: var(--tss-mono);
@@ -29,66 +37,77 @@
   display: none !important;
 }
 
+/* Toolbar: the file name leads, the buttons sit on its line, and the version line wraps
+   beneath both. `order` only moves the version line visually; it carries no focusable
+   content, so tab order and reading order (title, versions, buttons) are unchanged. */
 .ts-sandbox__toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 0.75rem;
-  margin-bottom: 0.6rem;
-  font-size: 0.75rem;
-  letter-spacing: 0.03em;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
   color: var(--tss-muted);
 }
 
 .ts-sandbox__title {
+  margin-right: auto;
+  font: 600 0.875rem/1.3 var(--tss-mono);
   color: var(--tss-text);
-  font-weight: 600;
 }
 
 .ts-sandbox__meta {
-  margin-right: auto;
+  order: 1;
+  flex-basis: 100%;
+  font: 400 0.75rem/1.45 var(--tss-mono);
+  letter-spacing: 0.02em;
 }
 
+/* Pill buttons, the same shape as the diagram controls elsewhere on the site. */
 .ts-sandbox__button {
-  font: 500 0.75rem/1 var(--tss-mono);
-  letter-spacing: 0.03em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  min-height: var(--tss-control-h);
+  padding: 0 1rem;
+  font: 500 0.8125rem/1 var(--tss-mono);
   color: var(--tss-text);
   background: transparent;
-  border: 1px solid var(--tss-border);
-  border-radius: var(--tss-radius);
-  padding: 0.5rem 0.85rem;
-  min-height: 36px;
+  border: 1.5px solid var(--tss-edge);
+  border-radius: 999px;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
+  transition: border-color 150ms ease-out, color 150ms ease-out, background-color 150ms ease-out, transform 100ms ease-out;
 }
 .ts-sandbox__button:hover {
   border-color: var(--tss-accent);
   color: var(--tss-accent);
 }
+.ts-sandbox__button:active {
+  transform: scale(0.96);
+}
 .ts-sandbox__button:focus-visible {
-  outline: 2px solid var(--tss-accent);
+  outline: var(--tss-focus);
   outline-offset: 2px;
 }
 .ts-sandbox__button:disabled {
   opacity: 0.6;
   cursor: progress;
+  transform: none;
 }
+/* Run is the one primary action, so it's the one filled button. */
 .ts-sandbox__button--run {
-  color: var(--tss-accent);
-  border-color: var(--tss-accent);
   font-weight: 600;
+  color: var(--tss-paper);
+  background: var(--tss-text);
+  border-color: var(--tss-text);
+}
+.ts-sandbox__button--run:hover {
+  color: var(--tss-paper);
+  background: var(--tss-accent);
+  border-color: var(--tss-accent);
 }
 .ts-sandbox__button--run::before {
   content: '▶';
-  font-size: 0.65em;
-  margin-right: 0.5em;
-  position: relative;
-  top: -0.05em;
-}
-@media (pointer: coarse) {
-  .ts-sandbox__button {
-    min-height: 44px;
-  }
+  font-size: 0.7em;
 }
 
 /* The static block is the page's normal <pre>; the component owns the margin. */
@@ -104,25 +123,47 @@
   overflow: hidden;
 }
 
+/* One status line under the editor. Neutral while loading or checking; a ✓ or ✗ mark
+   once the checker answers. The words stay full-contrast; the mark carries the colour. */
 .ts-sandbox__status {
-  margin: 0.65rem 0 0;
-  font-size: 0.78rem;
-  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0.85rem 0 0;
+  font: 400 0.875rem/1.45 var(--tss-body);
   color: var(--tss-muted);
 }
 .ts-sandbox__status:empty {
   display: none;
 }
-.ts-sandbox__status--ok {
-  color: var(--tss-ok);
-}
+.ts-sandbox__status--ok,
 .ts-sandbox__status--error {
-  color: var(--tss-error);
+  color: var(--tss-text);
+}
+.ts-sandbox__status--ok::before,
+.ts-sandbox__status--error::before {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 50%;
+  font: 700 0.75rem/1 var(--tss-mono);
+  color: #0f1726;
+}
+.ts-sandbox__status--ok::before {
+  content: '✓';
+  background: var(--tss-mark-ok);
+}
+.ts-sandbox__status--error::before {
+  content: '✗';
+  background: var(--tss-mark-error);
 }
 
-.ts-sandbox__diagnostics {
+/* Doubled class so a page's own list rules (tgrecojs's `.prose ol` padding) can't indent it. */
+.ts-sandbox .ts-sandbox__diagnostics {
   list-style: none;
-  margin: 0.45rem 0 0;
+  margin: 0.6rem 0 0;
   padding: 0;
   display: grid;
   gap: 0.4rem;
@@ -174,32 +215,36 @@
   overflow-wrap: anywhere;
 }
 
-/* Program output, written by the sandbox's own console binding. */
+/* Program output, written by the sandbox's own console binding. The console and the
+   React preview are drawn like the editor above them (inked edge, offset shadow), so the
+   three read as one instrument instead of an editor with a devtools card under it. */
 .ts-sandbox__output {
-  margin: 0.65rem 0 0;
-  border: 1px solid var(--tss-border);
+  margin: 1rem 0 0;
+  border: 1.5px solid var(--tss-edge);
   border-radius: var(--tss-radius);
-  background: var(--tss-surface);
+  box-shadow: 3px 3px 0 var(--shadow, transparent);
+  background: var(--tss-paper);
   overflow: hidden;
 }
 .ts-sandbox__output-head {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
+  justify-content: space-between;
   gap: 0.25rem 0.75rem;
-  padding: 0.45rem 0.75rem;
+  padding: 0.6rem 0.9rem;
   border-bottom: 1px solid var(--tss-border);
-  font-size: 0.72rem;
-  letter-spacing: 0.04em;
+  font: 500 0.72rem/1.3 var(--tss-mono);
 }
 .ts-sandbox__output-label {
-  color: var(--tss-text);
-  font-weight: 600;
+  color: var(--tss-muted);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 .ts-sandbox__output-status {
   color: var(--tss-muted);
   letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
 }
 .ts-sandbox__output-status--error {
   color: var(--tss-error);
@@ -230,9 +275,46 @@
   color: var(--tss-error);
 }
 
+/* Sentences, so the body face: a three-line mono hint read as a wall. */
 .ts-sandbox__hint {
-  margin: 0.5rem 0 0;
-  font-size: 0.72rem;
-  line-height: 1.5;
+  max-width: 62ch;
+  margin: 0.75rem 0 0;
+  font: 400 0.8125rem/1.55 var(--tss-body);
   color: var(--tss-muted);
+  text-wrap: pretty;
+}
+
+/* ReactSandbox's live preview: a sandboxed frame sized to its content. While a
+   re-render loads, the new frame sits hidden over the live one and takes its
+   place once React has mounted, so the last working preview never blinks out. */
+.ts-sandbox__preview {
+  margin: 1rem 0 0;
+  border: 1.5px solid var(--tss-edge);
+  border-radius: var(--tss-radius);
+  box-shadow: 3px 3px 0 var(--shadow, transparent);
+  background: var(--tss-paper);
+  overflow: hidden;
+}
+.ts-sandbox__preview-frame {
+  position: relative;
+  min-height: 72px;
+}
+.ts-sandbox__preview-frame iframe {
+  display: block;
+  width: 100%;
+  height: 72px;
+  border: 0;
+  background: transparent;
+  transition: height 0.15s ease-out;
+}
+.ts-sandbox__preview-frame iframe[data-pending] {
+  position: absolute;
+  inset: 0 0 auto;
+  visibility: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ts-sandbox__preview-frame iframe,
+  .ts-sandbox__button {
+    transition: none;
+  }
 }

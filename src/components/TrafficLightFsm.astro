@@ -131,17 +131,20 @@ const uid = `fsm-${Math.random().toString(36).slice(2, 8)}`;
   .bar { display: flex; align-items: center; justify-content: space-between; gap: .75rem 1rem; flex-wrap: wrap; margin-top: .75rem; }
   .readout { margin: 0; font: 500 .8125rem/1.4 var(--fsm-mono); color: var(--fsm-ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .controls { display: flex; gap: .5rem; }
+  /* Height and focus ring come from tgrecojs's control tokens; the fallbacks are the same values for hm-blog. */
   .controls button {
-    min-height: 44px; padding: 0 1rem; border: 1.5px solid var(--fsm-ink); border-radius: 999px;
+    min-height: var(--control-h, 44px); padding: 0 1rem; border: 1.5px solid var(--fsm-ink); border-radius: 999px;
     background: none; color: var(--fsm-ink); font: 500 .8125rem/1 var(--fsm-mono); cursor: pointer;
+    transition: border-color 150ms ease-out, color 150ms ease-out, transform 100ms ease-out;
   }
   .controls button:hover { border-color: var(--fsm-accent); color: var(--fsm-accent); }
-  .controls button:focus-visible { outline: 2px solid var(--fsm-accent); outline-offset: 3px; }
+  .controls button:active { transform: scale(.96); }
+  .controls button:focus-visible { outline: var(--focus-ring, 2px solid var(--fsm-accent)); outline-offset: var(--focus-offset, 2px); }
   /* Set here as well as in tgrecojs's global .figcap, so hm-blog captions match. */
   .figcap { margin-top: .6rem; font: 500 .75rem/1.45 var(--fsm-mono); letter-spacing: .02em; color: var(--fsm-ink-2); }
 
   @media (prefers-reduced-motion: reduce) {
-    .lamp, .halo, .node rect { transition: none; }
+    .lamp, .halo, .node rect, .controls button { transition: none; }
     .edge.taken line { animation: none; }
   }
 </style>

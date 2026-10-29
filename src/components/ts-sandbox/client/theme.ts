@@ -2,7 +2,8 @@
 // the page's colour scheme. Monaco themes are global, so these are applied
 // once per page rather than per editor.
 
-import type { EditorPalette, MonacoNamespace, MonacoTheme, Scheme, SiteConfig } from './types';
+import { siteConfig } from '../site-config';
+import type { EditorPalette, MonacoNamespace, MonacoTheme, SandboxRuntime, Scheme, SiteConfig } from './types';
 
 type EditorConfig = SiteConfig['editor'];
 
@@ -44,6 +45,21 @@ export const watchScheme = (editor: EditorConfig, onChange: (scheme: Scheme) => 
     media.removeEventListener('change', notify);
     observer.disconnect();
   };
+};
+
+let themed = false;
+
+/**
+ * Defines the site's editor themes, applies the current scheme and follows
+ * changes. Runs once per page however many sandboxes (of either kind) call it.
+ */
+export const ensureSiteTheme = (runtime: SandboxRuntime) => {
+  if (themed) return;
+  themed = true;
+  defineSiteThemes(runtime.monaco, siteConfig.editor);
+  applyScheme(runtime.monaco, currentScheme(siteConfig.editor));
+  watchScheme(siteConfig.editor, (scheme) => applyScheme(runtime.monaco, scheme));
+  void document.fonts.ready.then(() => runtime.monaco.editor.remeasureFonts());
 };
 
 const hex = (colour: string) => colour.replace(/^#/, '');
