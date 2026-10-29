@@ -5,8 +5,8 @@
  *   npm run mirror                 # copies every post from ../hm-blog
  *   npm run mirror -- --src PATH   # a different checkout of hm-blog
  *
- * Each mirrored file gets `source: hindleymilner` and a `canonical` URL added to its
- * frontmatter and a header comment. Mirrored files are generated: edit the original in
+ * Each mirrored file gets `source: hindleymilner` added to its frontmatter
+ * and a header comment. Published pages use local canonical URLs. Mirrored files are generated: edit the original in
  * hm-blog and run this again. Drafts stay drafts, so they never reach the production build.
  */
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
@@ -18,7 +18,6 @@ const args = process.argv.slice(2);
 const srcArg = args[args.indexOf('--src') + 1];
 const SRC = resolve(here, args.includes('--src') && srcArg ? srcArg : '../../hm-blog/src/content/blog');
 const DEST = resolve(here, '../src/content/posts');
-const HM_BASE = 'https://blog.hindleymilner.com/blog';
 
 if (!existsSync(SRC)) {
   console.error(`hm-blog posts not found at ${SRC}`);
@@ -40,7 +39,7 @@ for (const file of files) {
     .split(/\r?\n/)
     .filter((line) => !/^(source|canonical):/.test(line))
     .join('\n');
-  fm += `\nsource: hindleymilner\ncanonical: "${HM_BASE}/${id}"`;
+  fm += `\nsource: hindleymilner`;
   const body = raw.slice(m[0].length);
   const header = `{/* Mirrored from hindleymilner.com by scripts/mirror-hm.mjs. Edit the original in hm-blog, then run \`npm run mirror\`. */}\n\n`;
   const out = `---\n${fm}\n---\n\n${header}${body}`;

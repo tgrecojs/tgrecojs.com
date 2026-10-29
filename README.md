@@ -34,14 +34,13 @@ iframe, with a link to open it full screen.
 npm run mirror
 ```
 
-Reads every post in `../hm-blog/src/content/blog`, adds `source: hindleymilner` and a
-`canonical` link to the original, and writes it to `src/content/posts/<same-id>.mdx`.
+Reads every post in `../hm-blog/src/content/blog`, adds `source: hindleymilner`,
+and writes it to `src/content/posts/<same-id>.mdx`.
 Mirrored files are generated: edit the original in hm-blog and mirror again. A mirrored
 post keeps its draft flag, so HM drafts never reach this site's production build.
 
-On the page, a mirrored post shows a mustard dot and a "first published at
-hindleymilner.com" line, and its `<link rel="canonical">` points at the original so search
-engines credit HM.
+All posts appear as local tgrecojs.com articles, with local canonical URLs and no
+mirroring notices. Hindley Milner Systems is linked only in the footer.
 
 ## Offline
 

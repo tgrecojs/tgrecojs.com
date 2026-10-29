@@ -6,7 +6,7 @@ import { glob } from 'astro/loaders';
 //
 // `source` says where a post was first published. Posts mirrored from
 // hindleymilner.com are written by scripts/mirror-hm.mjs, carry
-// `source: hindleymilner` and a `canonical` URL, and should not be edited here.
+// `source: hindleymilner`, and should not be edited here. All posts publish locally.
 const posts = defineCollection({
   loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/posts' }),
   schema: z.object({

@@ -76,7 +76,6 @@ a:focus-visible { outline: var(--focus-ring); outline-offset: 3px; border-radius
 .mono { font: 500 .75rem/1.4 var(--f-mono); color: var(--ink-3); letter-spacing: .03em; font-variant-numeric: tabular-nums; }
 .dot { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--ink); display: inline-block; flex: none; }
 .dot-here { background: var(--cobalt); }
-.dot-hm { background: var(--mustard); }
 .tags { display: flex; gap: .5rem; flex-wrap: wrap; }
 /* Tags stay small to look at; the ::after overlay gives each a 44px-tall hit area. */
 .tag { position: relative; font: 500 .72rem/1 var(--f-mono); color: var(--ink-2); border: 1px solid var(--rule); border-radius: 999px; padding: .35rem .6rem; text-decoration: none; }

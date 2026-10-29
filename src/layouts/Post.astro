@@ -8,18 +8,17 @@ interface Props {
 }
 
 const { post } = Astro.props;
-const { title, description, pubDate, updatedDate, tags, source, canonical, series, seriesOrder, minutesRead, figure } =
+const { title, description, pubDate, updatedDate, tags, series, seriesOrder, minutesRead, figure } =
   post.data;
 
 const fmt = (d: Date) => d.toLocaleDateString('en-GB', { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' });
-const mirrored = source === 'hindleymilner';
 ---
 
-<Base title={title} description={description} canonical={canonical} type="article">
+<Base title={title} description={description} type="article">
   <article class="post">
     <header class="post-header">
       <div class="meta mono">
-        <i class:list={['dot', mirrored ? 'dot-hm' : 'dot-here']} aria-hidden="true"></i>
+        <i class="dot dot-here" aria-hidden="true"></i>
         <time datetime={pubDate.toISOString()}>{fmt(pubDate)}</time>
         {updatedDate && <span>updated {fmt(updatedDate)}</span>}
         {minutesRead ? <span>{minutesRead} min</span> : null}
@@ -40,17 +39,6 @@ const mirrored = source === 'hindleymilner';
       )}
     </header>
 
-    {
-      mirrored && canonical && (
-        <aside class="mirror mono">
-          <i class="dot dot-hm" aria-hidden="true"></i>
-          <span>
-            First published at <a href={canonical}>hindleymilner.com</a>, mirrored here.
-          </span>
-        </aside>
-      )
-    }
-
     {figure && <Figure src={figure} title={title} />}
 
     <div class="prose">
@@ -68,7 +56,5 @@ const mirrored = source === 'hindleymilner';
     margin: .6rem 0 .8rem; text-wrap: balance;
   }
   .post-desc { margin: 0 0 1rem; color: var(--ink-2); font-size: 1.15rem; max-width: 36rem; }
-  .mirror { display: flex; gap: .6rem; align-items: center; margin-top: 1.25rem; color: var(--ink-2); }
-  .mirror a { color: var(--ink); }
   .prose { margin-top: 2.5rem; }
 </style>
