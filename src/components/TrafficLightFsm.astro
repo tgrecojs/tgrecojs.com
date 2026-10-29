@@ -1,0 +1,203 @@
+---
+// A traffic light drawn next to its state diagram. Both are driven by the one transition
+// table in the script below, so the lit lamp, the active node and the edge just taken always
+// agree. Plain SVG + CSS and ~1 KB of script; no diagram library.
+//
+// Shared by tgrecojs.com and hm-blog: colours read tgrecojs's tokens first and fall back to
+// hm-blog's, so the same file works on both sites.
+interface Props {
+  caption?: string;
+}
+const {
+  caption = 'Each time the traffic light receives a timer event, it moves to the next state: green to yellow, yellow to red, and red back to green.',
+} = Astro.props;
+const uid = `fsm-${Math.random().toString(36).slice(2, 8)}`;
+---
+
+<figure class="fsm" data-fsm data-state="green">
+  <div class="stage">
+    <svg class="light" viewBox="0 0 90 222" aria-hidden="true">
+      <rect class="pole" x="39" y="192" width="12" height="29"></rect>
+      <rect class="housing" x="13" y="4" width="64" height="190" rx="16"></rect>
+      <circle class="halo red" cx="45" cy="40" r="27"></circle>
+      <circle class="halo yellow" cx="45" cy="99" r="27"></circle>
+      <circle class="halo green" cx="45" cy="158" r="27"></circle>
+      <circle class="lamp red" cx="45" cy="40" r="20"></circle>
+      <circle class="lamp yellow" cx="45" cy="99" r="20"></circle>
+      <circle class="lamp green" cx="45" cy="158" r="20"></circle>
+    </svg>
+
+    <svg class="graph" viewBox="0 0 360 240" role="img" aria-labelledby={`${uid}-title`}>
+      <title id={`${uid}-title`}>
+        State diagram: green goes to yellow, yellow goes to red, and red goes back to green, each on the timer event.
+      </title>
+      <g class="edge" data-edge="green">
+        <line x1="122" y1="60" x2="228" y2="60" pathLength="1"></line>
+        <polygon points="236,60 226,65 226,55"></polygon>
+        <text x="179" y="47" text-anchor="middle">timer</text>
+      </g>
+      <g class="edge" data-edge="yellow">
+        <line x1="268" y1="82" x2="208.5" y2="169.4" pathLength="1"></line>
+        <polygon points="204,176 213.8,170.6 205.5,164.9"></polygon>
+        <text x="250" y="140">timer</text>
+      </g>
+      <g class="edge" data-edge="red">
+        <line x1="156" y1="178" x2="96.5" y2="88.6" pathLength="1"></line>
+        <polygon points="92,82 101.8,87.5 93.5,93.1"></polygon>
+        <text x="110" y="140" text-anchor="end">timer</text>
+      </g>
+      <g class="node" data-node="green">
+        <rect x="20" y="40" width="100" height="40" rx="20"></rect>
+        <text x="70" y="60">Green</text>
+      </g>
+      <g class="node" data-node="yellow">
+        <rect x="240" y="40" width="100" height="40" rx="20"></rect>
+        <text x="290" y="60">Yellow</text>
+      </g>
+      <g class="node" data-node="red">
+        <rect x="130" y="180" width="100" height="40" rx="20"></rect>
+        <text x="180" y="200">Red</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="bar">
+    <p class="readout" data-readout aria-live="off">green</p>
+    <div class="controls">
+      <button type="button" data-step>Send timer</button>
+      <button type="button" data-play>Pause</button>
+    </div>
+  </div>
+  <figcaption class="figcap">{caption}</figcaption>
+</figure>
+
+<style>
+  .fsm {
+    --fsm-ink: var(--ink, var(--text-primary, #111));
+    --fsm-ink-2: var(--ink-2, var(--text-secondary, #555));
+    --fsm-edge: var(--ink-3, var(--text-secondary, #666));
+    --fsm-accent: var(--accent, var(--logic-blue, #2f55d4));
+    --fsm-mono: var(--f-mono, var(--font-mono, ui-monospace, monospace));
+    --fsm-red: #ef6a4c;
+    --fsm-yellow: #f4b829;
+    --fsm-green: #3fbf7f;
+    margin: 2rem 0;
+    max-width: none;
+  }
+  .stage {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 1.25rem 2.5rem;
+    padding: 1.5rem 1.25rem; border: 1.5px solid var(--fsm-ink); border-radius: 6px;
+    box-shadow: 3px 3px 0 var(--shadow, transparent);
+  }
+  .light { width: 72px; height: auto; flex: none; }
+  .graph { flex: 1 1 280px; max-width: 420px; height: auto; overflow: visible; }
+
+  /* The housing stays dark in both themes, like a real one; the outline keeps it visible on a dark page. */
+  .housing, .pole { fill: #0f1726; stroke: var(--fsm-ink); stroke-width: 1.5; }
+  .lamp { opacity: .2; transition: opacity 160ms ease-out; }
+  .halo { opacity: 0; transition: opacity 160ms ease-out; }
+  .red { fill: var(--fsm-red); }
+  .yellow { fill: var(--fsm-yellow); }
+  .green { fill: var(--fsm-green); }
+  .fsm[data-state="red"] .lamp.red,
+  .fsm[data-state="yellow"] .lamp.yellow,
+  .fsm[data-state="green"] .lamp.green { opacity: 1; }
+  .fsm[data-state="red"] .halo.red,
+  .fsm[data-state="yellow"] .halo.yellow,
+  .fsm[data-state="green"] .halo.green { opacity: .3; }
+
+  .node rect { fill: none; stroke: var(--fsm-edge); stroke-width: 1.5; transition: fill 160ms ease-out, stroke 160ms ease-out; }
+  .node text { fill: var(--fsm-ink-2); font: 500 15px/1 var(--f-body, var(--font-body, system-ui, sans-serif)); text-anchor: middle; dominant-baseline: central; }
+  .fsm[data-state="green"] [data-node="green"] rect { fill: var(--fsm-green); stroke: var(--fsm-ink); }
+  .fsm[data-state="yellow"] [data-node="yellow"] rect { fill: var(--fsm-yellow); stroke: var(--fsm-ink); }
+  .fsm[data-state="red"] [data-node="red"] rect { fill: var(--fsm-red); stroke: var(--fsm-ink); }
+  /* Dark text on the lit fill in both themes: every lamp colour is light enough for it. */
+  .fsm[data-state="green"] [data-node="green"] text,
+  .fsm[data-state="yellow"] [data-node="yellow"] text,
+  .fsm[data-state="red"] [data-node="red"] text { fill: #0f1726; font-weight: 600; }
+
+  .edge line { stroke: var(--fsm-edge); stroke-width: 1.5; }
+  .edge polygon { fill: var(--fsm-edge); }
+  .edge text { fill: var(--fsm-ink-2); font: 500 12px/1 var(--fsm-mono); }
+  .edge.taken line { stroke: var(--fsm-accent); stroke-width: 2.5; stroke-dasharray: 1; animation: fsm-draw 320ms cubic-bezier(.2, 0, 0, 1); }
+  .edge.taken polygon, .edge.taken text { fill: var(--fsm-accent); }
+  @keyframes fsm-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+
+  .bar { display: flex; align-items: center; justify-content: space-between; gap: .75rem 1rem; flex-wrap: wrap; margin-top: .75rem; }
+  .readout { margin: 0; font: 500 .8125rem/1.4 var(--fsm-mono); color: var(--fsm-ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .controls { display: flex; gap: .5rem; }
+  .controls button {
+    min-height: 44px; padding: 0 1rem; border: 1.5px solid var(--fsm-ink); border-radius: 999px;
+    background: none; color: var(--fsm-ink); font: 500 .8125rem/1 var(--fsm-mono); cursor: pointer;
+  }
+  .controls button:hover { border-color: var(--fsm-accent); color: var(--fsm-accent); }
+  .controls button:focus-visible { outline: 2px solid var(--fsm-accent); outline-offset: 3px; }
+  /* Set here as well as in tgrecojs's global .figcap, so hm-blog captions match. */
+  .figcap { margin-top: .6rem; font: 500 .75rem/1.45 var(--fsm-mono); letter-spacing: .02em; color: var(--fsm-ink-2); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lamp, .halo, .node rect { transition: none; }
+    .edge.taken line { animation: none; }
+  }
+</style>
+
+<script>
+  type Light = 'green' | 'yellow' | 'red';
+
+  // The whole machine: one event (`timer`), and exactly one next state for each state.
+  const next: Record<Light, Light> = { green: 'yellow', yellow: 'red', red: 'green' };
+  // How long each state holds while playing. Yellow is short, like a real light.
+  const holdMs: Record<Light, number> = { green: 2600, yellow: 1300, red: 2600 };
+
+  for (const root of document.querySelectorAll<HTMLElement>('[data-fsm]')) {
+    const readout = root.querySelector<HTMLElement>('[data-readout]')!;
+    const stepButton = root.querySelector<HTMLButtonElement>('[data-step]')!;
+    const playButton = root.querySelector<HTMLButtonElement>('[data-play]')!;
+    const edges = [...root.querySelectorAll<SVGGElement>('[data-edge]')];
+
+    let state: Light = 'green';
+    // Autoplay only when the reader hasn't asked for reduced motion; Play still works either way.
+    let playing = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let timer: number | undefined;
+
+    // Hold still while scrolled out of view, so the reader arrives at a light mid-cycle
+    // rather than one that has been spinning unseen.
+    const onScreen = () => {
+      const box = root.getBoundingClientRect();
+      return box.bottom > 0 && box.top < innerHeight;
+    };
+
+    const send = (manual: boolean) => {
+      const from = state;
+      state = next[from];
+      root.dataset.state = state;
+      // Announce steps the reader took; stay quiet during autoplay so a screen reader isn't flooded.
+      readout.setAttribute('aria-live', manual ? 'polite' : 'off');
+      readout.textContent = `${from} + timer → ${state}`;
+      for (const edge of edges) edge.classList.remove('taken');
+      const taken = edges.find((edge) => edge.dataset.edge === from);
+      if (taken) {
+        void taken.getBoundingClientRect(); // restart the draw animation
+        taken.classList.add('taken');
+      }
+    };
+
+    const schedule = () => {
+      clearTimeout(timer);
+      timer = playing && !document.hidden
+        ? window.setTimeout(() => { if (onScreen()) send(false); schedule(); }, holdMs[state])
+        : undefined;
+    };
+
+    const setPlaying = (on: boolean) => {
+      playing = on;
+      playButton.textContent = on ? 'Pause' : 'Play';
+      schedule();
+    };
+
+    stepButton.addEventListener('click', () => { send(true); setPlaying(false); });
+    playButton.addEventListener('click', () => setPlaying(!playing));
+    document.addEventListener('visibilitychange', schedule);
+    setPlaying(playing);
+  }
+</script>

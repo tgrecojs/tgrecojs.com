@@ -18,16 +18,15 @@ import exhaustiveSwitch from '../../sandbox/exhaustive-switch.ts?raw';
 import timerStateShapes from '../../sandbox/timer-state-shapes.ts?raw';
 import timerTransitions from '../../sandbox/timer-transitions.ts?raw';
 import timer from '../../sandbox/timer.ts?raw';
+import TrafficLightFsm from '../../components/TrafficLightFsm.astro';
 
 This post builds on discriminated unions. They let us describe valid state shapes, but on their own, they don't define which state transitions are valid.
 
 To define those rules, we can use a finite state machine (FSM).[^mathematics]
 
-If you've ever seen a traffic light, then you're already acquainted with FSMs. Consider a simple traffic light and its three states:
+If you've ever seen a traffic light, then you're already acquainted with FSMs. Consider a simple traffic light and its three states: Green, Yellow, Red.
 
-1. Green (Go)
-2. Yellow
-3. Red
+<TrafficLightFsm />
 
 It's called a **finite state machine** because the model has a fixed, finite set of states. We can then use this knowledge to define which state transitions are allowed.
 
