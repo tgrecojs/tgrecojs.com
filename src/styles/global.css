@@ -100,6 +100,38 @@ a.tag:hover { border-color: var(--ink); color: var(--ink); }
 .prose .footnotes h2 { font-size: .8rem; font-family: var(--f-mono); letter-spacing: .08em; text-transform: uppercase; margin: 0 0 .5rem; }
 .prose .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
+/* ─── Tables ─── */
+/* Same ink border and cobalt shadow as code blocks and images. Rows are divided by
+   hairlines in --rule; the header is a mono label strip, like the meta line. */
+.prose table {
+  width: 100%; border-collapse: separate; border-spacing: 0;
+  margin: 1.75rem 0; font-size: .95rem; line-height: 1.5;
+  background: var(--paper); border: 1.5px solid var(--ink); border-radius: 6px; box-shadow: 3px 3px 0 var(--shadow);
+}
+.prose th, .prose td { padding: .6rem .85rem; text-align: left; vertical-align: top; }
+.prose th { font: 600 .72rem/1.4 var(--f-mono); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; color: var(--ink-2); background: var(--paper-2); border-bottom: 1.5px solid var(--ink); }
+.prose td { border-top: 1px solid var(--rule); }
+.prose tbody tr:first-child td { border-top: 0; }
+.prose th + th, .prose td + td { border-left: 1px solid var(--rule); }
+.prose th:first-child { border-top-left-radius: 5px; }
+.prose th:last-child { border-top-right-radius: 5px; }
+.prose tr:last-child td:first-child { border-bottom-left-radius: 5px; }
+.prose tr:last-child td:last-child { border-bottom-right-radius: 5px; }
+.prose td code, .prose th code { white-space: nowrap; }
+
+/* ─── Math (remark-math + rehype-katex, MathML output, no KaTeX CSS) ─── */
+/* Inline $…$ and display $$…$$ both render as <span class="katex"><math>. A display
+   equation is a direct child of .prose, so it gets the boxed treatment and room to
+   breathe; a real math font keeps glyphs and operator spacing right in every browser. */
+.prose .katex math { font-family: "STIX Two Math", "Latin Modern Math", "Cambria Math", "Noto Sans Math", math, serif; }
+.prose > .katex {
+  display: block; width: fit-content; min-width: min(100%, 18rem); max-width: 100%;
+  margin: 2rem auto; padding: 1rem 2rem; overflow-x: auto; text-align: center;
+  background: var(--paper); border: 1.5px solid var(--ink); border-radius: 6px; box-shadow: 3px 3px 0 var(--shadow);
+}
+.prose > .katex math[display="block"] { margin: 0; font-size: 1.6rem; line-height: 1.3; color: var(--ink); }
+.prose > .katex math[display="block"] mo { padding-inline: .12em; }
+
 /* ─── Code blocks (Shiki, dual theme; themes in src/styles/shiki-night-sky.mjs) ─── */
 pre.astro-code {
   font-family: var(--f-mono); font-size: .85rem; line-height: 1.6;

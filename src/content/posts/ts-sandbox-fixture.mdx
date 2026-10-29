@@ -1,0 +1,28 @@
+---
+title: "TypeScript Sandbox fixture"
+description: "Draft fixture for the TsSandbox component: two independent editors that start from the same intentional TS2322. Never published."
+pubDate: 2026-10-28
+tags: ["typescript"]
+draft: true
+minutesRead: 1
+source: hindleymilner
+canonical: "https://blog.hindleymilner.com/blog/ts-sandbox-fixture"
+---
+
+{/* Mirrored from hindleymilner.com by scripts/mirror-hm.mjs. Edit the original in hm-blog, then run `npm run mirror`. */}
+
+
+import TsSandbox from '../../components/ts-sandbox/TsSandbox.astro';
+import exhaustiveSwitch from '../../sandbox/exhaustive-switch.ts?raw';
+
+This page exists to exercise `TsSandbox` while it is being built. It stays a draft, so it renders in `astro dev` and is left out of the production build.
+
+Both editors start from the same source. `TimerState` includes `cancelled`, but the `switch` in `transition` never handles it, so the assignment to `never` fails with TS2322. Add `case 'cancelled': return state;` in one editor and only that editor's error should clear. Reset restores the original source, and the error with it.
+
+<TsSandbox id="exhaustive-switch-a" title="Exhaustive switch (A)" code={exhaustiveSwitch} />
+
+Some prose between the two editors, so the second one sits in its own context and the page scrolls like a real post.
+
+<TsSandbox id="exhaustive-switch-b" title="Exhaustive switch (B)" code={exhaustiveSwitch} />
+
+That is the whole fixture.

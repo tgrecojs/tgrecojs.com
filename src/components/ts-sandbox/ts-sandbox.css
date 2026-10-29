@@ -1,0 +1,169 @@
+/* TsSandbox: the chrome around the static code block and the Monaco editor.
+   Colours resolve through each site's own tokens (hm-blog names first,
+   tgrecojs.com names second) with neutral fallbacks, so this file is the
+   same in both sites. Editor colours come from site-config.ts instead. */
+
+.ts-sandbox {
+  --tss-border: var(--border, var(--rule, #8a8f9c));
+  --tss-edge: var(--ink, var(--border, #8a8f9c));
+  --tss-surface: var(--charcoal-surface, var(--paper-2, #f1f2f5));
+  --tss-text: var(--text-primary, var(--ink, #15181f));
+  --tss-muted: var(--text-muted, var(--ink-3, #5f6673));
+  --tss-accent: var(--logic-blue, var(--accent, #2f55d4));
+  --tss-ok: var(--mint, var(--logic-blue, #2f8f5b));
+  --tss-error: var(--draft, #e5484d);
+  --tss-mono: var(--font-mono, var(--f-mono, ui-monospace, Menlo, monospace));
+  --tss-radius: 6px;
+  margin: 1.5rem 0;
+  min-width: 0;
+  font-family: var(--tss-mono);
+}
+
+/* tgrecojs.com caps text children of .prose at 38rem; code goes full column there. */
+.ts-sandbox[data-ts-sandbox] {
+  max-width: none;
+}
+
+.ts-sandbox [hidden] {
+  display: none !important;
+}
+
+.ts-sandbox__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+  color: var(--tss-muted);
+}
+
+.ts-sandbox__title {
+  color: var(--tss-text);
+  font-weight: 600;
+}
+
+.ts-sandbox__meta {
+  margin-right: auto;
+}
+
+.ts-sandbox__button {
+  font: 500 0.75rem/1 var(--tss-mono);
+  letter-spacing: 0.03em;
+  color: var(--tss-text);
+  background: transparent;
+  border: 1px solid var(--tss-border);
+  border-radius: var(--tss-radius);
+  padding: 0.5rem 0.85rem;
+  min-height: 36px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.ts-sandbox__button:hover {
+  border-color: var(--tss-accent);
+  color: var(--tss-accent);
+}
+.ts-sandbox__button:focus-visible {
+  outline: 2px solid var(--tss-accent);
+  outline-offset: 2px;
+}
+.ts-sandbox__button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+@media (pointer: coarse) {
+  .ts-sandbox__button {
+    min-height: 44px;
+  }
+}
+
+/* The static block is the page's normal <pre>; the component owns the margin. */
+.ts-sandbox .ts-sandbox__static pre {
+  margin: 0;
+}
+
+.ts-sandbox__editor {
+  height: 0;
+  border: 1.5px solid var(--tss-edge);
+  border-radius: var(--tss-radius);
+  box-shadow: 3px 3px 0 var(--shadow, transparent);
+  overflow: hidden;
+}
+
+.ts-sandbox__status {
+  margin: 0.65rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--tss-muted);
+}
+.ts-sandbox__status:empty {
+  display: none;
+}
+.ts-sandbox__status--ok {
+  color: var(--tss-ok);
+}
+.ts-sandbox__status--error {
+  color: var(--tss-error);
+}
+
+.ts-sandbox__diagnostics {
+  list-style: none;
+  margin: 0.45rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.ts-sandbox__diagnostic {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.6rem;
+  width: 100%;
+  text-align: left;
+  font: 400 0.8rem/1.5 var(--tss-mono);
+  color: var(--tss-text);
+  background: var(--tss-surface);
+  border: 1px solid var(--tss-border);
+  border-left: 3px solid var(--tss-error);
+  border-radius: var(--tss-radius);
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+}
+.ts-sandbox__diagnostic:hover {
+  border-color: var(--tss-accent);
+  border-left-color: var(--tss-error);
+}
+.ts-sandbox__diagnostic:focus-visible {
+  outline: 2px solid var(--tss-accent);
+  outline-offset: 2px;
+}
+.ts-sandbox__diagnostic--warning {
+  border-left-color: var(--tss-accent);
+}
+.ts-sandbox__diagnostic-code {
+  color: var(--tss-error);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ts-sandbox__diagnostic--warning .ts-sandbox__diagnostic-code {
+  color: var(--tss-accent);
+}
+.ts-sandbox__diagnostic-where {
+  color: var(--tss-muted);
+  white-space: nowrap;
+}
+.ts-sandbox__diagnostic-message {
+  flex-basis: 100%;
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ts-sandbox__hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--tss-muted);
+}

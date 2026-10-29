@@ -5,8 +5,8 @@ pubDate: 2026-10-28
 tags: ["typescript", "state-machines", "union-types", "series"]
 series: "Impossible States"
 seriesOrder: 2
-draft: true
-minutesRead: 0
+draft: false
+minutesRead: 6
 source: hindleymilner
 canonical: "https://blog.hindleymilner.com/blog/prevent-impossible-states-pt-2-state-transitions"
 ---
@@ -14,37 +14,35 @@ canonical: "https://blog.hindleymilner.com/blog/prevent-impossible-states-pt-2-s
 {/* Mirrored from hindleymilner.com by scripts/mirror-hm.mjs. Edit the original in hm-blog, then run `npm run mirror`. */}
 
 
-{/* Writing scaffold. Replace every [bracketed prompt] with your own words. The code blocks are
-filled in and typecheck under --strict (scratch copy: scratchpad/post2/timer.ts); change them
-freely, then tell me and I'll re-check. Target 500–800 words of prose. Same shape as part 1:
-short opening, groundwork, the problem, the fix, "what this does not solve yet", the lesson.
-Update minutesRead when the draft is ready. */}
-
-This post builds on discriminated unions. They let us describe valid state shapes, but they don't tell us which changes between those states should be allowed.
+This post builds on discriminated unions. They let us describe valid state shapes, but on their own, they don't define which state transitions are valid.
 
 To define those rules, we can use a finite state machine (FSM).[^mathematics]
 
-Have you ever seen a traffic light? We can model a simple one as a finite state machine with three states:
+If you've ever seen a traffic light, then you're already acquainted with FSMs. Consider a simple traffic light and its three states:
 
 1. Green (Go)
 2. Yellow
 3. Red
 
-It's called a **finite state machine** because the model has a fixed, finite set of states. We can then define which transitions between those states are allowed.
+It's called a **finite state machine** because the model has a fixed, finite set of states. We can then use this knowledge to define which state transitions are allowed.
 
-Now, let's create our own finite state machine: a timer with four statuses, `idle`, `running`, `paused`, and `finished`.
+The best way to learn is by doing, so let's create our own finite state machine: a timer with four statuses, `idle`, `running`, `paused`, and `finished`.
 
-1. Start: `idle` → `running`.
-2. Pause: `running` → `paused`.
-3. Resume: `paused` → `running`.
-4. Tick: `running` → `running` while time remains, or `finished` when the last second elapses.
-5. Reset: any state → `idle`.
+Below we have the events and their corresponding state transitions:
 
-The effect of an event depends on the current state. A `pause` event moves a running timer to `paused`; while it's `idle`, the same event leaves it unchanged.
+| Event | From | To |
+| --- | --- | --- |
+| Start | `idle` | `running` |
+| Pause | `running` | `paused` |
+| Resume | `paused` | `running` |
+| Tick | `running` | `running` while time remains, or `finished` when the last second elapses |
+| Reset | any state | `idle` |
 
-## States and events
+The impact of an event depends on the current state. Dispatching a `start` event to an `idle` timer moves its status to `running`. A `pause` event moves a running timer to `paused`.
 
-To model our timer, we'll create two tagged unions.
+## Defining states and events
+
+To model our timer, we'll create [two tagged unions](https://tgrecojs.com/posts/union-types-are-the-typescript-feature-i-should-have-learned-first#giving-each-case-its-own-type).
 
 The first, `TimerState`, describes our timer's status and its data at a specific point in time. The second, `TimerEvent`, defines the events we can send to it.
 
@@ -65,9 +63,7 @@ type TimerEvent =
 
 We'll use both unions together to create our state machine, with a strict set of rules for transitioning between states.
 
-In our model, `remainingSeconds` is only available when a timer's status is `running` or `paused`.
-
-As a result, the object literals below produce type errors.
+In our model, `remainingSeconds` is required when a timer's status is `running` or `paused`, and it isn't part of the other cases. The object literals below therefore produce type errors.
 
 ```ts
 // @ts-expect-error  an idle timer has no remaining time
@@ -77,7 +73,7 @@ const bad: TimerState = { status: 'idle', remainingSeconds: 5 };
 const bad2: TimerState = { status: 'running' };
 ```
 
-## Deciding which transitions are allowed
+## Modeling enforceable transitions
 
 An `idle` state with a `pause` event results in nothing happening. The transition function just returns the current state, because `start` is the only event that moves an idle timer into another status. Our rules are listed below.
 
@@ -90,24 +86,30 @@ An `idle` state with a `pause` event results in nothing happening. The transitio
 | any | `reset` | `idle` |
 | anything else | | unchanged |
 
-[One sentence: the function signature accepts any state with any event, so the rules in this table have to live in the implementation.]
+Our function accepts any `TimerState` with any `TimerEvent`, so the implementation has to enforce the transition rules we've defined.
 
 ## Writing the transition function
 
-We can describe the transition function with one expression:
+With our data modeled, we can describe our transition function using mathematical notation:
 
 $$
 \delta : S \times E \to S
 $$
 
-Here, `S` represents timer states, including their data, and `E` represents events. The function `δ` (delta) takes a state–event pair and returns the next state. In TypeScript:
+We use `δ` (delta) to represent our transition function. It takes two inputs: a current state from the set `S` and an event from the set `E`. The `×` groups those inputs into a state–event pair, and `→ S` tells us that the function returns a timer state.
+
+For example, a running timer with two seconds remaining and a `tick` event produces a running timer with one second remaining. The returned state can also be unchanged, as when an idle timer receives a `pause` event.
+
+In TypeScript, we express the same signature like this:
 
 ```ts
 type Transition = (state: TimerState, event: TimerEvent) => TimerState;
 ```
 
+We can use `Transition` to type our implementation:
+
 ```ts
-const transition = (state: TimerState, event: TimerEvent): TimerState => {
+const transition: Transition = (state, event) => {
   if (event.type === 'reset') {
     return { status: 'idle' };
   }
@@ -146,11 +148,11 @@ const transition = (state: TimerState, event: TimerEvent): TimerState => {
 };
 ```
 
-We don't want to simply write `default: return state`, because that would let a new status pass through without being handled. The `never` type has no possible values, so assigning `state` to it checks that no member of `TimerState` remains. If someone later introduces a status, such as `cancelled`, without adding a matching case, TypeScript reports a type error.
+In JavaScript land, we're used to finishing a reducer with `default: return state`. In the outer switch here, though, we're checking `state.status`, so we can use `never` to ensure that every status in `TimerState` has a corresponding case. If we add a status without handling it, TypeScript reports a type error.
 
-Inside our `tick` case, the condition `state.remainingSeconds > 1` determines whether the timer has more than one second left. If it does, the next state is `running` with one second less. When `remainingSeconds` is `1`, that condition is false, so our transition function returns a new state with the status `finished`.
+Inside our `tick` case, the condition `state.remainingSeconds > 1` determines whether the timer has more than one second left. If true, the next `TimerState` keeps the `running` status, with `remainingSeconds` decremented by one. When `remainingSeconds` is `1`, the function returns a new `TimerState` with `status: 'finished'`.
 
-We're isolating our timer logic from the clock, which lends itself well to testing. We can pass different states and events directly into the transition function without waiting for time to pass. Given the same state and event, it returns the same result. That's what makes this transition function deterministic.
+We're also isolating our timer logic from the clock, which lends itself well to testing.
 
 ```ts
 const idle: TimerState = { status: 'idle' };
@@ -174,14 +176,14 @@ const stillIdle = transition(idle, { type: 'pause' });
 transition(idle, { type: 'start' });
 ```
 
-## What this does not solve yet
+## Inputs and UI actions
 
-A timer's duration should be a positive number. Even though `-30` satisfies the `number` type, we'd need a runtime check to make sure the value makes sense for our timer.
+The `number` type still accepts values such as `-30`, so we need a runtime check to enforce a positive timer duration.
 
-Returning the current state when an event doesn't apply is intentional. We can model the UI so the ability to pause only appears when the timer is running. If a `pause` event is still sent while the timer is idle, the transition function leaves the state unchanged.
+The UI should only offer the option to pause when the timer is running. If `pause` is still sent while it's idle, returning the current state is the behavior we intended.
 
 ## The lesson
 
-[Two or three sentences: the type system checks the state and event shapes; the transition function enforces the rules for changing states. Refer to the examples above. End there. No teaser; when the next post exists, link it from here.]
+TypeScript helps us catch invalid state shapes and missing cases. Our transition function makes sure the timer only follows the valid state transitions we've defined.
 
 [^mathematics]: For historical background, see Michael O. Rabin and Dana Scott, [Finite Automata and Their Decision Problems](https://www.cs.miami.edu/~burt/learning/csc427.222/docs/rabin-scott.pdf) (1959).

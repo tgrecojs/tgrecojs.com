@@ -1,5 +1,6 @@
 {
   "extends": "astro/tsconfigs/strict",
   "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist"]
+  // src/sandbox holds TsSandbox examples with intentional type errors.
+  "exclude": ["dist", "src/sandbox"]
 }
