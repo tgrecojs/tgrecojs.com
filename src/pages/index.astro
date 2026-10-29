@@ -16,11 +16,11 @@ const telescope = posts.find((p) => p.id === 'telescope');
 <Base title="Thomas Greco">
   <header class="hero">
     <div>
-      <h1>Notes from <em>Thomas Greco</em></h1>
+      <h1>Footprints in the sand from <em>Thomas Greco</em></h1>
       <p>
-        Software engineer. TypeScript, functional programming, and the things I build on weekends. Some posts first
-        appear at <a href="https://hindleymilner.com">Hindley Milner Systems</a> and are mirrored here; the rest are
-        mine alone.
+       Trials and tribulations of a programmer with a deep appreciation for deterministic software... and also, life!
+
+       <br/>Some posts first appear at <a href="https://hindleymilner.com">Hindley Milner Systems</a> and are mirrored here. Enjoy!
       </p>
     </div>
     <figure class="plate">
@@ -37,12 +37,6 @@ const telescope = posts.find((p) => p.id === 'telescope');
     </figure>
   </header>
 
-  <div class="legend" aria-label="How posts are marked">
-    <span class="lab">Key</span>
-    <span class="key"><i class="dot dot-here"></i> written here</span>
-    <span class="key"><i class="dot dot-hm"></i> mirrored from hindleymilner.com</span>
-  </div>
-
   {posts.length === 0 && <p class="mono">Nothing published yet.</p>}
 
   <ul class="posts">
@@ -51,12 +45,12 @@ const telescope = posts.find((p) => p.id === 'telescope');
         const mirrored = post.data.source === 'hindleymilner';
         return (
           <li class="post">
-            <i class:list={['dot', mirrored ? 'dot-hm' : 'dot-here']} title={mirrored ? 'Mirrored from hindleymilner.com' : 'Written here'} />
+            <i class:list={['dot', mirrored ? 'dot-hm' : 'dot-here']} title={mirrored ? 'Mirrored from hindleymilner.com' : 'Written here'} aria-hidden="true" />
             <div>
               <div class="meta mono">
                 <time datetime={post.data.pubDate.toISOString()}>{fmt(post.data.pubDate)}</time>
                 <span class="src">{mirrored ? 'λ hindleymilner.com' : 'tgrecojs.com'}</span>
-                {post.data.minutesRead && <span>{post.data.minutesRead} min</span>}
+                {post.data.minutesRead ? <span>{post.data.minutesRead} min</span> : null}
                 {post.data.draft && <span class="draft">draft</span>}
               </div>
               <h2>
@@ -81,8 +75,8 @@ const telescope = posts.find((p) => p.id === 'telescope');
 <style>
   .hero { display: grid; grid-template-columns: 1fr minmax(180px, 240px); gap: 1.5rem 2.5rem; align-items: end; margin-top: 3.5rem; }
   .hero h1 {
-    font-family: var(--f-display); font-weight: 700; font-variation-settings: "opsz" 144;
-    font-size: clamp(2.4rem, 7vw, 3.6rem); line-height: 1.02; letter-spacing: -.02em; margin: 0 0 1rem; text-wrap: balance;
+    font-family: var(--f-display); font-weight: 600; font-optical-sizing: auto;
+    font-size: clamp(2.2rem, 6.5vw, 3.3rem); line-height: 1.04; letter-spacing: -.015em; margin: 0 0 1rem; text-wrap: balance;
   }
   .hero h1 em { font-style: italic; font-weight: 500; }
   .hero p { margin: 0; max-width: 34rem; color: var(--ink-2); }
@@ -92,18 +86,14 @@ const telescope = posts.find((p) => p.id === 'telescope');
   .plate img { display: block; width: 100%; height: auto; border: 1.5px solid var(--ink); box-shadow: 3px 3px 0 var(--shadow); background: #f2efe7; transition: transform .12s ease, box-shadow .12s ease; }
   .plate a:hover img { transform: translate(1px, 1px); box-shadow: 2px 2px 0 var(--shadow); }
 
-  .legend { display: flex; gap: 1.25rem; flex-wrap: wrap; align-items: center; margin-top: 3rem; padding-top: 1.25rem; border-top: 1.5px solid var(--ink); }
-  .legend .lab { font: 500 0.7rem/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
-  .key { display: inline-flex; align-items: center; gap: .45rem; font: 500 .8rem/1 var(--f-mono); color: var(--ink-2); }
-
-  .posts { list-style: none; margin: 1.5rem 0 0; padding: 0; display: grid; gap: 2.25rem; }
+  .posts { list-style: none; margin: 3rem 0 0; padding: 1.75rem 0 0; border-top: 1.5px solid var(--ink); display: grid; gap: 2.25rem; }
   .post { display: grid; grid-template-columns: 14px 1fr; gap: 0 1rem; align-items: start; }
   .post > .dot { margin-top: .55rem; }
   .meta { display: flex; gap: .9rem; flex-wrap: wrap; }
   .meta .src { color: var(--ink-2); }
-  .meta .draft { color: var(--tomato); }
-  .post h2 { font-family: var(--f-display); font-variation-settings: "opsz" 48; font-weight: 600; font-size: 1.55rem; line-height: 1.2; letter-spacing: -.01em; margin: .25rem 0 .4rem; text-wrap: balance; }
-  .post h2 a { color: var(--ink); text-decoration: none; background-image: linear-gradient(var(--shadow), var(--shadow)); background-size: 0 2px; background-repeat: no-repeat; background-position: 0 100%; transition: background-size .18s ease; }
+  .meta .draft { color: var(--draft); }
+  .post h2 { font-family: var(--f-display); font-optical-sizing: auto; font-weight: 600; font-size: 1.45rem; line-height: 1.2; letter-spacing: -.01em; margin: .25rem 0 .4rem; text-wrap: balance; }
+  .post h2 a { color: var(--ink); text-decoration: none; background-image: linear-gradient(var(--accent), var(--accent)); background-size: 0 2px; background-repeat: no-repeat; background-position: 0 100%; transition: background-size .18s cubic-bezier(.2, 0, 0, 1); }
   .post h2 a:hover { background-size: 100% 2px; }
   .post p { margin: 0 0 .6rem; color: var(--ink-2); max-width: 36rem; }
 

@@ -3,7 +3,7 @@
   "short_name": "tgrecojs",
   "start_url": "/",
   "display": "minimal-ui",
-  "background_color": "#f2efe7",
-  "theme_color": "#f2efe7",
+  "background_color": "#f2f4f8",
+  "theme_color": "#f2f4f8",
   "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
 }

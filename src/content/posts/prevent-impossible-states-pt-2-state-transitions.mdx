@@ -1,0 +1,187 @@
+---
+title: "Prevent Impossible States Pt. 2 - State Transitions"
+description: "Model a timer's states and events with TypeScript unions, then define the rules for moving between them."
+pubDate: 2026-10-28
+tags: ["typescript", "state-machines", "union-types", "series"]
+series: "Impossible States"
+seriesOrder: 2
+draft: true
+minutesRead: 0
+source: hindleymilner
+canonical: "https://blog.hindleymilner.com/blog/prevent-impossible-states-pt-2-state-transitions"
+---
+
+{/* Mirrored from hindleymilner.com by scripts/mirror-hm.mjs. Edit the original in hm-blog, then run `npm run mirror`. */}
+
+
+{/* Writing scaffold. Replace every [bracketed prompt] with your own words. The code blocks are
+filled in and typecheck under --strict (scratch copy: scratchpad/post2/timer.ts); change them
+freely, then tell me and I'll re-check. Target 500–800 words of prose. Same shape as part 1:
+short opening, groundwork, the problem, the fix, "what this does not solve yet", the lesson.
+Update minutesRead when the draft is ready. */}
+
+This post builds on discriminated unions. They let us describe valid state shapes, but they don't tell us which changes between those states should be allowed.
+
+To define those rules, we can use a finite state machine (FSM).[^mathematics]
+
+Have you ever seen a traffic light? We can model a simple one as a finite state machine with three states:
+
+1. Green (Go)
+2. Yellow
+3. Red
+
+It's called a **finite state machine** because the model has a fixed, finite set of states. We can then define which transitions between those states are allowed.
+
+Now, let's create our own finite state machine: a timer with four statuses, `idle`, `running`, `paused`, and `finished`.
+
+1. Start: `idle` → `running`.
+2. Pause: `running` → `paused`.
+3. Resume: `paused` → `running`.
+4. Tick: `running` → `running` while time remains, or `finished` when the last second elapses.
+5. Reset: any state → `idle`.
+
+The effect of an event depends on the current state. A `pause` event moves a running timer to `paused`; while it's `idle`, the same event leaves it unchanged.
+
+## States and events
+
+To model our timer, we'll create two tagged unions.
+
+The first, `TimerState`, describes our timer's status and its data at a specific point in time. The second, `TimerEvent`, defines the events we can send to it.
+
+```ts
+type TimerState =
+  | { status: 'idle' }
+  | { status: 'running'; remainingSeconds: number }
+  | { status: 'paused'; remainingSeconds: number }
+  | { status: 'finished' };
+
+type TimerEvent =
+  | { type: 'start'; durationSeconds: number }
+  | { type: 'pause' }
+  | { type: 'resume' }
+  | { type: 'tick' }
+  | { type: 'reset' };
+```
+
+We'll use both unions together to create our state machine, with a strict set of rules for transitioning between states.
+
+In our model, `remainingSeconds` is only available when a timer's status is `running` or `paused`.
+
+As a result, the object literals below produce type errors.
+
+```ts
+// @ts-expect-error  an idle timer has no remaining time
+const bad: TimerState = { status: 'idle', remainingSeconds: 5 };
+
+// @ts-expect-error  a running timer must say how much time is left
+const bad2: TimerState = { status: 'running' };
+```
+
+## Deciding which transitions are allowed
+
+An `idle` state with a `pause` event results in nothing happening. The transition function just returns the current state, because `start` is the only event that moves an idle timer into another status. Our rules are listed below.
+
+| Current state | Event | Result |
+| --- | --- | --- |
+| `idle` | `start` | `running`, with `remainingSeconds` taken from the event's `durationSeconds` |
+| `running` | `pause` | `paused`, keeping `remainingSeconds` |
+| `paused` | `resume` | `running`, keeping `remainingSeconds` |
+| `running` | `tick` | `running` with one second less, or `finished` when the last second elapses |
+| any | `reset` | `idle` |
+| anything else | | unchanged |
+
+[One sentence: the function signature accepts any state with any event, so the rules in this table have to live in the implementation.]
+
+## Writing the transition function
+
+We can describe the transition function with one expression:
+
+$$
+\delta : S \times E \to S
+$$
+
+Here, `S` represents timer states, including their data, and `E` represents events. The function `δ` (delta) takes a state–event pair and returns the next state. In TypeScript:
+
+```ts
+type Transition = (state: TimerState, event: TimerEvent) => TimerState;
+```
+
+```ts
+const transition = (state: TimerState, event: TimerEvent): TimerState => {
+  if (event.type === 'reset') {
+    return { status: 'idle' };
+  }
+
+  switch (state.status) {
+    case 'idle':
+      return event.type === 'start'
+        ? { status: 'running', remainingSeconds: event.durationSeconds }
+        : state;
+
+    case 'running':
+      switch (event.type) {
+        case 'pause':
+          return { status: 'paused', remainingSeconds: state.remainingSeconds };
+        case 'tick':
+          return state.remainingSeconds > 1
+            ? { status: 'running', remainingSeconds: state.remainingSeconds - 1 }
+            : { status: 'finished' };
+        default:
+          return state;
+      }
+
+    case 'paused':
+      return event.type === 'resume'
+        ? { status: 'running', remainingSeconds: state.remainingSeconds }
+        : state;
+
+    case 'finished':
+      return state;
+
+    default: {
+      const unreachable: never = state;
+      return unreachable;
+    }
+  }
+};
+```
+
+We don't want to simply write `default: return state`, because that would let a new status pass through without being handled. The `never` type has no possible values, so assigning `state` to it checks that no member of `TimerState` remains. If someone later introduces a status, such as `cancelled`, without adding a matching case, TypeScript reports a type error.
+
+Inside our `tick` case, the condition `state.remainingSeconds > 1` determines whether the timer has more than one second left. If it does, the next state is `running` with one second less. When `remainingSeconds` is `1`, that condition is false, so our transition function returns a new state with the status `finished`.
+
+We're isolating our timer logic from the clock, which lends itself well to testing. We can pass different states and events directly into the transition function without waiting for time to pass. Given the same state and event, it returns the same result. That's what makes this transition function deterministic.
+
+```ts
+const idle: TimerState = { status: 'idle' };
+
+const running = transition(idle, { type: 'start', durationSeconds: 2 });
+// { status: 'running', remainingSeconds: 2 }
+
+const paused = transition(running, { type: 'pause' });
+// { status: 'paused', remainingSeconds: 2 }
+
+const resumed = transition(paused, { type: 'resume' });
+// { status: 'running', remainingSeconds: 2 }
+
+const finished = transition(transition(resumed, { type: 'tick' }), { type: 'tick' });
+// { status: 'finished' }
+
+const stillIdle = transition(idle, { type: 'pause' });
+// { status: 'idle' } — pause doesn't apply to an idle timer, so nothing changes
+
+// @ts-expect-error  'start' requires durationSeconds
+transition(idle, { type: 'start' });
+```
+
+## What this does not solve yet
+
+A timer's duration should be a positive number. Even though `-30` satisfies the `number` type, we'd need a runtime check to make sure the value makes sense for our timer.
+
+Returning the current state when an event doesn't apply is intentional. We can model the UI so the ability to pause only appears when the timer is running. If a `pause` event is still sent while the timer is idle, the transition function leaves the state unchanged.
+
+## The lesson
+
+[Two or three sentences: the type system checks the state and event shapes; the transition function enforces the rules for changing states. Refer to the examples above. End there. No teaser; when the next post exists, link it from here.]
+
+[^mathematics]: For historical background, see Michael O. Rabin and Dana Scott, [Finite Automata and Their Decision Problems](https://www.cs.miami.edu/~burt/learning/csc427.222/docs/rabin-scott.pdf) (1959).

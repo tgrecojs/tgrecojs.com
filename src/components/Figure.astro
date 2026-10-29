@@ -2,6 +2,7 @@
 // Embeds a self-contained Colorfigures page from /public/figures. The figure is
 // its own HTML document (it ships its own script and styles), so an iframe keeps
 // it isolated from the post's CSS and lets it be opened full-screen on its own.
+// Pass the caption as children when it needs links; `caption` takes plain text.
 interface Props {
   src: string;
   title: string;
@@ -14,13 +15,16 @@ const { src, title, caption, height = 640 } = Astro.props;
 <figure class="figure">
   <iframe src={src} title={`${title} (interactive figure)`} loading="lazy" style={`height:${height}px`}></iframe>
   <figcaption class="figcap">
-    {caption ?? 'Drag to turn it. Press the buttons. Flip See-through to watch the mechanism.'}
+    <slot>{caption ?? 'Drag to turn it. Press the buttons. Flip See-through to watch the mechanism.'}</slot>
     &nbsp;·&nbsp;<a href={src}>open full screen</a>
   </figcaption>
 </figure>
 
 <style>
-  .figure { margin: 2rem 0; }
+  /* Full column width even inside .prose, which caps text children at 38rem. */
+  .figure { margin: 2rem 0; max-width: none; }
   iframe { display: block; width: 100%; border: 1.5px solid var(--ink); border-radius: 6px; box-shadow: 3px 3px 0 var(--shadow); background: #f2efe7; }
-  @media (max-width: 600px) { iframe { height: 560px !important; } }
+  /* Colorfigures stack their controls on phones; the telescope needs ~745px there.
+     Too short and the figure scrolls inside the frame, which fights the page scroll. */
+  @media (max-width: 600px) { iframe { height: 760px !important; } }
 </style>

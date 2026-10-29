@@ -22,7 +22,7 @@ const mirrored = source === 'hindleymilner';
         <i class:list={['dot', mirrored ? 'dot-hm' : 'dot-here']} aria-hidden="true"></i>
         <time datetime={pubDate.toISOString()}>{fmt(pubDate)}</time>
         {updatedDate && <span>updated {fmt(updatedDate)}</span>}
-        {minutesRead && <span>{minutesRead} min</span>}
+        {minutesRead ? <span>{minutesRead} min</span> : null}
         {series && (
           <span>
             {series}{seriesOrder && `, part ${seriesOrder}`}
@@ -63,8 +63,8 @@ const mirrored = source === 'hindleymilner';
   .post-header { margin-top: 3.5rem; padding-bottom: 1.5rem; border-bottom: 1.5px solid var(--ink); }
   .meta { display: flex; gap: .9rem; align-items: center; flex-wrap: wrap; }
   .post-title {
-    font-family: var(--f-display); font-weight: 700; font-variation-settings: "opsz" 144;
-    font-size: clamp(2rem, 6vw, 3rem); line-height: 1.05; letter-spacing: -.02em;
+    font-family: var(--f-display); font-weight: 600; font-optical-sizing: auto;
+    font-size: clamp(1.9rem, 5.5vw, 2.75rem); line-height: 1.08; letter-spacing: -.015em;
     margin: .6rem 0 .8rem; text-wrap: balance;
   }
   .post-desc { margin: 0 0 1rem; color: var(--ink-2); font-size: 1.15rem; max-width: 36rem; }

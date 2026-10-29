@@ -21,7 +21,6 @@ const {
 const pageUrl = new URL(Astro.url.pathname, Astro.site);
 const canonicalURL = canonical ?? pageUrl.href;
 const path = Astro.url.pathname.replace(/\/$/, '') || '/';
-const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
 ---
 
 <!doctype html>
@@ -34,13 +33,13 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
     <link rel="alternate" type="application/rss+xml" title="Thomas Greco" href="/rss.xml" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#f2efe7" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#1b1915" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f2f4f8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d1220" media="(prefers-color-scheme: dark)" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,600;1,500&family=IBM+Plex+Sans:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
 
@@ -57,17 +56,13 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
     <meta name="twitter:card" content={image ? 'summary_large_image' : 'summary'} />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
+    <meta name="twitter:creator" content="@tgrecojs" />
   </head>
   <body>
     <div class="wrap">
-      <nav class="nav" aria-label="Site">
-        <a class="brand" href="/">tgrecojs.com <span>— Thomas Greco</span></a>
-        <div class="pills">
-          <a href="/" aria-current={isCurrent('/') ? 'page' : undefined}>Posts</a>
-          <a href="/about" aria-current={isCurrent('/about') ? 'page' : undefined}>About</a>
-          <a href="https://hindleymilner.com">HM ↗</a>
-        </div>
-      </nav>
+      <header class="nav">
+        <a class="brand" href="/" aria-current={path === '/' ? 'page' : undefined}>tgrecojs.com <span>— Thomas Greco</span></a>
+      </header>
 
       <main>
         <slot />
@@ -76,8 +71,8 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
       <footer class="footer">
         <span>© {new Date().getFullYear()} Thomas Greco</span>
         <span>
-          <a href="/rss.xml">RSS</a> · <a href="https://github.com/tgrecojs">GitHub</a> ·
-          <a href="https://hindleymilner.com">Hindley Milner Systems</a>
+          <a href="/rss.xml">RSS</a> · <a href="https://github.com/tgrecojs" rel="me">GitHub</a> ·
+          <a href="https://x.com/tgrecojs" rel="me">Twitter</a> · <a href="https://hindleymilner.com">Hindley Milner Systems</a>
         </span>
       </footer>
     </div>
