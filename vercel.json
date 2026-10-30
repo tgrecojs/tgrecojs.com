@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/posts/union-types-are-the-typescript-feature-i-should-have-learned-first",
+      "destination": "/posts/prevent-impossible-states-pt-1-union-types",
+      "statusCode": 301
+    },
+    {
+      "source": "/og/union-types-are-the-typescript-feature-i-should-have-learned-first.png",
+      "destination": "/og/prevent-impossible-states-pt-1-union-types.png",
+      "statusCode": 301
+    }
+  ]
+}

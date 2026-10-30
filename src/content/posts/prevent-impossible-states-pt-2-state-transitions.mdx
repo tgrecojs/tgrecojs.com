@@ -48,7 +48,7 @@ The impact of an event depends on the current state. Dispatching a `start` event
 
 ## Defining states and events
 
-To model our timer, we'll create [two tagged unions](https://tgrecojs.com/posts/union-types-are-the-typescript-feature-i-should-have-learned-first#giving-each-case-its-own-type).
+To model our timer, we'll create [two tagged unions](/posts/prevent-impossible-states-pt-1-union-types#giving-each-case-its-own-type).
 
 The first, `TimerState`, describes our timer's status and its data at a specific point in time. The second, `TimerEvent`, defines the events we can send to it.
 
