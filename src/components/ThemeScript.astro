@@ -1,0 +1,72 @@
+<meta name="theme-color" content="#f2f4f8" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#0d1220" media="(prefers-color-scheme: dark)" />
+
+<!-- Apply the preference before stylesheets and body content can paint. -->
+<script is:inline>
+  (() => {
+    const root = document.documentElement;
+    const system = window.matchMedia('(prefers-color-scheme: dark)');
+    const themeColors = document.querySelectorAll('meta[name="theme-color"]');
+    const validTheme = (value) => value === 'light' || value === 'dark';
+    let preference = null;
+
+    try {
+      const saved = localStorage.getItem('theme');
+      if (validTheme(saved)) preference = saved;
+    } catch {
+      // Storage can be blocked; the control still works for this page.
+    }
+
+    const currentTheme = () => preference ?? (system.matches ? 'dark' : 'light');
+
+    const applyTheme = () => {
+      if (preference) root.dataset.theme = preference;
+      else delete root.dataset.theme;
+
+      const dark = currentTheme() === 'dark';
+      themeColors.forEach((meta) => {
+        meta.content = dark ? '#0d1220' : '#f2f4f8';
+      });
+
+      const button = document.getElementById('theme-toggle');
+      if (button) {
+        button.setAttribute('aria-pressed', String(dark));
+        button.title = dark ? 'Switch to light mode' : 'Switch to dark mode';
+      }
+    };
+
+    applyTheme();
+    const syncTheme = () => {
+      const button = document.getElementById('theme-toggle');
+      if (button) button.dataset.motion = 'false';
+      applyTheme();
+    };
+
+    system.addEventListener('change', syncTheme);
+    window.addEventListener('storage', (event) => {
+      if (event.key !== 'theme' && event.key !== null) return;
+      preference = validTheme(event.newValue) ? event.newValue : null;
+      syncTheme();
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const button = document.getElementById('theme-toggle');
+      if (!button) return;
+
+      applyTheme();
+      button.addEventListener('pointerdown', () => { button.dataset.motion = 'true'; });
+      button.addEventListener('keydown', () => { button.dataset.motion = 'false'; });
+      button.addEventListener('click', (event) => {
+        button.dataset.motion = String(event.detail > 0);
+        preference = currentTheme() === 'dark' ? 'light' : 'dark';
+        applyTheme();
+        try {
+          localStorage.setItem('theme', preference);
+        } catch {
+          // Keep the in-memory choice when saving is unavailable.
+        }
+      });
+      button.hidden = false;
+    }, { once: true });
+  })();
+</script>

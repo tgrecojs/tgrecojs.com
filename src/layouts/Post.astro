@@ -14,7 +14,16 @@ const { title, description, pubDate, updatedDate, tags, series, seriesOrder, min
 const fmt = (d: Date) => d.toLocaleDateString('en-GB', { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' });
 ---
 
-<Base title={title} description={description} type="article">
+<Base
+  title={title}
+  description={description}
+  type="article"
+  image={`/og/${post.id}.png`}
+  imageAlt={`${title} — Thomas Greco`}
+  imageWidth={1200}
+  imageHeight={630}
+  imageType="image/png"
+>
   <article class="post">
     <header class="post-header">
       <div class="meta mono">

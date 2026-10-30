@@ -71,6 +71,11 @@ a:focus-visible { outline: var(--focus-ring); outline-offset: 3px; border-radius
 .brand { display: inline-flex; align-items: center; min-height: 44px; font: 600 0.8125rem/1 var(--f-mono); letter-spacing: .02em; color: var(--ink); text-decoration: none; }
 .brand span { color: var(--ink-3); font-weight: 400; margin-left: .4em; }
 .brand:hover span { color: var(--ink-2); }
+@media (max-width: 800px) {
+  .nav { padding-inline-end: 56px; }
+  .brand { flex-wrap: wrap; gap: .4em; }
+  .brand span { margin-left: 0; }
+}
 
 /* ─── Labels, dots, tags ─── */
 .mono { font: 500 .75rem/1.4 var(--f-mono); color: var(--ink-3); letter-spacing: .03em; font-variant-numeric: tabular-nums; }
