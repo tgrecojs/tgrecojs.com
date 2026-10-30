@@ -1,0 +1,64 @@
+<button id="theme-toggle" type="button" aria-label="Dark mode" aria-pressed="false" hidden>
+  <span class="icon" aria-hidden="true">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+      <path class="glass" d="M8.5 16c0-2-2.5-3.1-2.5-6a6 6 0 0 1 12 0c0 2.9-2.5 4-2.5 6Z" />
+      <path d="M9 19h6m-5 3h4m-2-6v-4m-2-1 2 1 2-1" />
+      <g class="rays"><path d="M12 0v1M2 6l1 .5m18-.5-1 .5M1 12h1m20 0h1M4.5 2.5l1 1m13-1-1 1" /></g>
+    </svg>
+  </span>
+</button>
+
+<style>
+  /* Part of the header row (.nav is a space-between flex row), so it scrolls away with the
+     brand instead of floating over the post. The negative end margin lines the 24px icon,
+     not the 44px hit area, up with the right edge of the text column. */
+  button {
+    flex: none;
+    margin-inline-end: calc((24px - var(--control-h)) / 2);
+    width: var(--control-h);
+    height: var(--control-h);
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--paper);
+    color: var(--ink-2);
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  .icon {
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .glass { fill: var(--mustard); }
+  .rays { opacity: 1; transform-origin: 12px 10px; transform: scale(1); }
+  button[aria-pressed="true"] .glass { fill: transparent; }
+  button[aria-pressed="true"] .rays { opacity: 0; transform: scale(.8); }
+
+  button[data-motion="true"] .icon {
+    transition: transform 150ms cubic-bezier(.25, .1, 0, 1);
+  }
+
+  button[data-motion="true"] .rays {
+    transition: opacity 150ms cubic-bezier(.25, .1, 0, 1), transform 150ms cubic-bezier(.25, .1, 0, 1);
+  }
+
+  button[data-motion="true"]:active .icon { transform: scale(.96); }
+
+  @media (hover: hover) and (pointer: fine) {
+    button:hover {
+      background: var(--paper-2);
+      color: var(--ink);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    button[data-motion] .icon,
+    button[data-motion] .rays {
+      transition: none;
+    }
+  }
+</style>

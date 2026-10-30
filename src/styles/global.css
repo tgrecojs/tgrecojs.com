@@ -63,6 +63,12 @@ a:hover { text-decoration-thickness: 2.5px; }
 a:focus-visible { outline: var(--focus-ring); outline-offset: 3px; border-radius: 2px; }
 /* Baseline for controls; :where keeps it at zero specificity so a component's own rule wins. */
 :where(button, select, input, textarea, summary):focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+/* Theme switches are instant: ThemeScript sets this for the one frame in which the palette
+   changes, so components with colour transitions (diagram outlines, sandbox buttons) don't
+   fade while everything else snaps. The toggle keeps its own icon motion. */
+:root[data-theme-switching] :not(#theme-toggle, #theme-toggle *),
+:root[data-theme-switching] :not(#theme-toggle, #theme-toggle *)::before,
+:root[data-theme-switching] :not(#theme-toggle, #theme-toggle *)::after { transition: none !important; }
 .wrap { max-width: var(--measure); margin-inline: auto; }
 
 /* ─── Nav ─── */
