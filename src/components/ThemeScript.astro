@@ -35,11 +35,21 @@
       }
     };
 
+    // A theme change swaps the palette with transitions off (see [data-theme-switching] in
+    // global.css), so every colour changes in the same frame. Reading a computed style
+    // commits the new colours before the attribute comes off, so nothing animates after.
+    const switchTheme = () => {
+      root.setAttribute('data-theme-switching', '');
+      applyTheme();
+      void getComputedStyle(document.body ?? root).opacity;
+      setTimeout(() => root.removeAttribute('data-theme-switching'));
+    };
+
     applyTheme();
     const syncTheme = () => {
       const button = document.getElementById('theme-toggle');
       if (button) button.dataset.motion = 'false';
-      applyTheme();
+      switchTheme();
     };
 
     system.addEventListener('change', syncTheme);
@@ -59,7 +69,7 @@
       button.addEventListener('click', (event) => {
         button.dataset.motion = String(event.detail > 0);
         preference = currentTheme() === 'dark' ? 'light' : 'dark';
-        applyTheme();
+        switchTheme();
         try {
           localStorage.setItem('theme', preference);
         } catch {

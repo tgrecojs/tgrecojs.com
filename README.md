@@ -49,6 +49,13 @@ Hashed assets are cached on first use, pages are network-first with a cached fal
 a page never opened on that device falls back to `/offline`. Bump `VERSION` in `sw.js` when
 you want old caches dropped on the next deploy.
 
+## Social cards
+
+Every published post gets a 1200×630 card at `/og/<post-id>.png`, rendered at build time
+by `src/lib/post-image.ts` with Satori and sharp. `npm test` builds the site and checks
+each card and its meta tags. Emoji in titles are drawn with
+[Twemoji](https://github.com/jdecked/twemoji) graphics, licensed CC-BY 4.0.
+
 ## Deploy
 
 Static site; no adapter needed. Connect the repo to Vercel with the Astro preset, or run

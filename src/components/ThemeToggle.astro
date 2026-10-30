@@ -9,11 +9,12 @@
 </button>
 
 <style>
+  /* Part of the header row (.nav is a space-between flex row), so it scrolls away with the
+     brand instead of floating over the post. The negative end margin lines the 24px icon,
+     not the 44px hit area, up with the right edge of the text column. */
   button {
-    position: fixed;
-    top: max(24px, env(safe-area-inset-top, 0px));
-    right: max(24px, env(safe-area-inset-right, 0px));
-    z-index: 1;
+    flex: none;
+    margin-inline-end: calc((24px - var(--control-h)) / 2);
     width: var(--control-h);
     height: var(--control-h);
     padding: 0;
@@ -23,11 +24,6 @@
     color: var(--ink-2);
     cursor: pointer;
     touch-action: manipulation;
-  }
-
-  button:focus-visible {
-    outline: 2px solid var(--ink);
-    outline-offset: 3px;
   }
 
   .icon {
@@ -51,10 +47,6 @@
   }
 
   button[data-motion="true"]:active .icon { transform: scale(.96); }
-
-  @media (max-width: 800px) {
-    button { right: max(16px, env(safe-area-inset-right, 0px)); }
-  }
 
   @media (hover: hover) and (pointer: fine) {
     button:hover {

@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
+import { dirname, join } from 'node:path';
 import satori from 'satori';
 import sharp from 'sharp';
 
@@ -8,6 +9,26 @@ const fonts = Promise.all([
   readFile(require.resolve('@fontsource/ibm-plex-serif/files/ibm-plex-serif-latin-600-normal.woff')),
   readFile(require.resolve('@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff')),
 ]);
+
+// Plex has no emoji, so emoji in a title are drawn from Twemoji's SVGs (graphics CC-BY 4.0,
+// credited in the README), read from node_modules at build time with no network fetch.
+const twemoji = dirname(require.resolve('@twemoji/svg/package.json'));
+
+// Twemoji names each file by its code points in hex, dropping the FE0F variation selector
+// except inside ZWJ sequences: ❤️ is 2764.svg, 🧑‍🚀 is 1f9d1-200d-1f680.svg.
+const twemojiFile = (emoji: string) =>
+  Array.from(emoji.includes('‍') ? emoji : emoji.replace(/️/g, ''), (char) => char.codePointAt(0)?.toString(16)).join('-');
+
+const loadAdditionalAsset = async (languageCode: string, segment: string) => {
+  if (languageCode !== 'emoji') return [];
+  try {
+    const svg = await readFile(join(twemoji, `${twemojiFile(segment)}.svg`));
+    return `data:image/svg+xml;base64,${svg.toString('base64')}`;
+  } catch {
+    // An emoji newer than this Twemoji release renders as a blank box rather than failing the build.
+    return [];
+  }
+};
 
 interface PostImage {
   title: string;
@@ -48,7 +69,8 @@ export const renderPostImage = async ({ title, pubDate }: PostImage) => {
           width: '100%', margin: 0, fontFamily: 'IBM Plex Serif', fontWeight: 600,
           fontSize: title.length > 110 ? 48 : title.length > 65 ? 60 : 72,
           lineHeight: 1.12, letterSpacing: '-1px', lineClamp: 4,
-          overflow: 'hidden', overflowWrap: 'anywhere',
+          // Even line lengths, so a break never strands a short tail like "- Union Types".
+          textWrap: 'balance', overflow: 'hidden', overflowWrap: 'anywhere',
         }, title),
       ]),
       element('div', {
@@ -63,6 +85,7 @@ export const renderPostImage = async ({ title, pubDate }: PostImage) => {
     ]),
     {
       width: 1200, height: 630,
+      loadAdditionalAsset,
       fonts: [
         { name: 'IBM Plex Serif', data: serif, weight: 600, style: 'normal' },
         { name: 'IBM Plex Mono', data: mono, weight: 400, style: 'normal' },
