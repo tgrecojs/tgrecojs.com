@@ -5,7 +5,7 @@ pubDate: 2026-10-29
 tags: ["typescript", "react", "state-machines", "series"]
 series: "Impossible States"
 seriesOrder: 3
-draft: false
+draft: true
 minutesRead: 4
 ---
 
@@ -22,9 +22,11 @@ import timers from '../../sandbox/timers.tsx?raw';
 
 ## Introduction
 
-In [Part 2](/posts/prevent-impossible-states-pt-2-state-transitions), we defined our timer's states and transitions. Now let's use that same model to build a React UI.
+This post is going to cover using the data model introduced prior in the series. We're going to take a look at using our tagged unions 
 
-When someone first opens the timer, it's `idle`. They should only see the option to start it. There isn't a running timer to pause or anything to reset. The controls we offer should follow the timer's current state.
+In [Part 2](/posts/prevent-impossible-states-pt-2-state-transitions), we defined our timer's states and transitions. Now I want to use that same model to determine what the user sees.
+
+When someone first opens our timer, they should only have the option to start it. They shouldn't be able to pause or reset a timer that hasn't started. We already have the timer's state, so let's use it to decide which controls to show.
 
 ## Connecting the timer to React
 
@@ -86,7 +88,7 @@ We're using our state machine to deterministically render the UI, so we don't ne
 
 ## Sending events from the UI
 
-Our transition function is our API for managing the timer's state. The button handlers send events to it, rather than deciding the next state themselves. This keeps our transition rules separate from our view logic: the view takes the resulting state and renders the appropriate controls.
+Our transition function is our API for managing the timer's state. If someone clicks Pause, we send a `pause` event and let the function determine the next state. We're keeping our business logic out of the view. The view can just take the values it needs to show the appropriate controls.
 
 I've historically been very anti-`useEffect`. In production, I usually reach for a state management library, or avoid Effects altogether, to keep application logic separate from my view code. For this example, though, a small Effect isolated in a custom hook fits.
 
@@ -102,7 +104,7 @@ The UI only offers actions appropriate to its current state, but other code can 
 
 ## Adding more timers
 
-We can take this a step further and let the user create multiple timer widgets. Each `Timer` calls `useTimer`, so [each instance has its own state](https://react.dev/learn/preserving-and-resetting-state). Pausing or resetting one timer doesn't change another timer's state.
+We only had to write one transition function. Now we can let users create multiple timer widgets, each with its own controls. Each `Timer` calls `useTimer`, so [each instance has its own state](https://react.dev/learn/preserving-and-resetting-state). Pausing or resetting one won't change the state of a second or third timer.
 
 In `Timers.tsx`:
 
@@ -114,4 +116,6 @@ Try creating two timers, starting both, and pausing or resetting just one. The o
 
 ## The lesson
 
-Our UI stays in sync with our timer's state because that's what determines the controls we render. A paused timer offers Resume and Reset, and each timer widget manages its state independently. The exhaustiveness check catches missing state cases, but we still need to check that each view offers the controls we intended.
+The main benefit for me is that our UI stays in sync with our state. A paused timer gives the user the option to resume or reset it, and each timer is managed independently. We added the ability to create more timers without rewriting the rules for how a timer behaves.
+
+The exhaustiveness check catches a missing state case. We still need to check that each view shows the right controls.
