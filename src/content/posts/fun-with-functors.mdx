@@ -4,6 +4,7 @@ description: "JavaScript arrays are functors. What that means, the two laws they
 pubDate: 2018-05-01
 tags: ["javascript", "functional-programming", "functors"]
 minutesRead: 5
+draft: true
 ---
 
 import FunctorLaws from '../../components/functor-laws/FunctorLaws.astro';
@@ -25,7 +26,9 @@ The first topic we'll cover is the **functor data type**. Functors are everywher
 
 ## Meet functor
 
-The essence of a **functor data type** is that it is `mappable`. This simply means that it provides a container (or box) that we can `map` through in order to read or transform values. The focal point of that last sentence is *a container that we can map through*. Sounds kinda familiar, right? Let's think for a second. In the context of JavaScript, can you think of any objects that fit this description?
+The essence of a **functor data type** is that it is `mappable`. This simply means that it provides a container (or box) that we can `map` through in order to read or transform values. The focal point of that last sentence is *a container that we can map through*. Sounds kinda familiar, right? Let's think for a second.
+
+n the context of JavaScript, can you think of any objects that fit this description?
 
 ```js
 const exampleFunctor = [1, 2, 3, 4, 5];
