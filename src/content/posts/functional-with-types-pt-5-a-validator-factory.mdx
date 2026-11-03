@@ -1,0 +1,43 @@
+---
+title: "Functional with Types Pt. 5 - A Validator Factory"
+description: "Build text, email, and phone validators from familiar transformations, rules, and explicit results."
+pubDate: 2026-11-02
+tags: ["typescript","validation","functional-programming"]
+draft: true
+source: here
+series: "Functional, with types"
+seriesOrder: 5
+---
+
+> Working outline. Start with working validators and extract the factory only after the shared structure is visible.
+
+## The question
+
+What is shared by several input validators, and what should remain configurable?
+
+## Build the text validator directly
+
+Combine trim with validate(required). Trace one ordinary string and one whitespace-only string. Ask the reader to predict the returned case. No factory is needed to understand this version.
+
+## Add email and phone as concrete variations
+
+Add emailFormat to the email validator. Give the phone validator its extra formatting-removal step and ten-digit rule. Keep normalization, rules, and error messages visibly separate. Put all three definitions next to each other so repetition motivates the abstraction.
+
+## Extract the common construction
+
+Introduce createValidator(normalize, ...rules). It supplies required once, composes normalization with validate(required, ...rules), and returns a string-to-Validation function. Trace the types of normalize, validate(...), and the final returned function before showing the compact implementation.
+
+Use the function-building pipe introduced in part 3. The rules are a homogeneous Rule[]; typing a heterogeneous list of transformation functions in variadic pipe is a separate problem.
+
+## Verify the contract
+
+Check a normal value, whitespace-only input, a format failure, successful phone normalization, and ordering when more than one rule fails. State the formatting assumptions: the sample phone policy requires ten digits, and the sample email check is deliberately basic. Format acceptance does not establish that an address or number exists.
+
+Show the equivalent compose call with reversed function arguments. Do not infer a validated-email type from a plain successful string result: that stronger distinction needs another model.
+
+## Leave one useful next question
+
+Once a step returns Result, how do later transformations act only on success? That motivates a follow-up on map and andThen, rather than adding that extra abstraction to this factory post.
+
+Practice: reuse labs 2, 3, and 8. Lab 5's satisfies feature can become an optional sidebar for checking rule tables after the base factory is understood. Reference: [Function typing and rest parameters](https://www.typescriptlang.org/docs/handbook/2/functions.html).
+

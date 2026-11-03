@@ -1,0 +1,49 @@
+---
+title: "Functional with Types Pt. 4 - Validation Results"
+description: "Turn a boolean input check into an explicit success-or-failure result using a discriminated union."
+pubDate: 2026-11-02
+tags: ["typescript","validation","algebraic-data-types"]
+draft: true
+source: here
+series: "Functional, with types"
+seriesOrder: 4
+---
+
+> Working outline. This is the bridge between composing ordinary functions and configuring a validator factory.
+
+## The question
+
+How can a check return either a useful value or an explanation of failure without allowing contradictory states?
+
+## Normalize a single input
+
+Start with trim and a required check. Demonstrate that a string containing only spaces becomes an empty string before checking it. The first version can simply return boolean; let its missing error message create the need for the next change.
+
+## Give the two outcomes their own cases
+
+Introduce the concrete Validation union before generalizing it. Then connect the familiar two-case structure to the generic relationship from part 1:
+
+```ts
+type Result<A, E> =
+  | { ok: true; value: A }
+  | { ok: false; error: E };
+
+type Validation = Result<string, string>;
+```
+
+The cases are alternatives, while each case groups fields together. This is already a practical algebraic data type: a tagged sum of product-shaped cases. It is not necessary to introduce generalized algebraic data types here.
+
+## Handle the result before reading its fields
+
+Plan a sandbox where accessing value before checking ok is rejected. Show the valid success and failure branches. Connect to [the existing union-types post](/posts/prevent-impossible-states-pt-1-union-types) without requiring the reader to have read it.
+
+## Make a rule reusable
+
+Introduce Rule as a predicate plus its failure message. Implement one required rule and validate one value. Then let validate accept several rules, preserving the first failure in the supplied order. Explain the curried form using part 2. Leave createValidator for part 5.
+
+## Bridge to the next post
+
+We now have normalization, rules, a result type, and composition. Next, configure these pieces for text, email, and phone inputs, then extract their shared construction.
+
+Practice: labs 7 and 8. References: [Discriminated unions and narrowing](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#discriminated-unions), [rest parameters](https://www.typescriptlang.org/docs/handbook/2/functions.html#rest-parameters-and-arguments).
+

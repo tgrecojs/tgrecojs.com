@@ -1,5 +1,6 @@
-import type { Dispatch } from 'react';
-import type { TimerEvent, TimerState } from './timer';
+import type { Dispatch } from "react";
+import type { TimerEvent, TimerState } from "./timer";
+import { ControlButton } from "./ControlButton";
 
 type TimerViewProps = {
   state: TimerState;
@@ -8,36 +9,38 @@ type TimerViewProps = {
 
 export const TimerView = ({ state, dispatch }: TimerViewProps) => {
   switch (state.status) {
-    case 'idle':
+    case "idle":
       return (
-        <button onClick={() => dispatch({ type: 'start', durationSeconds: 30 })}>
-          Start
-        </button>
+        <ControlButton
+          label="Start"
+          event={{ type: "start", durationSeconds: 30 }}
+          dispatch={dispatch}
+        />
       );
 
-    case 'running':
+    case "running":
       return (
         <section>
           <p>Running: {state.remainingSeconds} seconds remaining</p>
-          <button onClick={() => dispatch({ type: 'pause' })}>Pause</button>
-          <button onClick={() => dispatch({ type: 'reset' })}>Reset</button>
+          <ControlButton label="Pause" event={{ type: "pause" }} dispatch={dispatch} />
+          <ControlButton label="Reset" event={{ type: "reset" }} dispatch={dispatch} />
         </section>
       );
 
-    case 'paused':
+    case "paused":
       return (
         <section>
           <p>Paused: {state.remainingSeconds} seconds remaining</p>
-          <button onClick={() => dispatch({ type: 'resume' })}>Resume</button>
-          <button onClick={() => dispatch({ type: 'reset' })}>Reset</button>
+          <ControlButton label="Resume" event={{ type: "resume" }} dispatch={dispatch} />
+          <ControlButton label="Reset" event={{ type: "reset" }} dispatch={dispatch} />
         </section>
       );
 
-    case 'finished':
+    case "finished":
       return (
         <section>
           <p>Timer finished</p>
-          <button onClick={() => dispatch({ type: 'reset' })}>Reset</button>
+          <ControlButton label="Reset" event={{ type: "reset" }} dispatch={dispatch} />
         </section>
       );
 

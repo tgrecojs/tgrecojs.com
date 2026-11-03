@@ -1,0 +1,46 @@
+---
+title: "Functional with Types Pt. 1 - Generics"
+description: "Use generic type parameters to preserve relationships between inputs and outputs without giving up inference."
+pubDate: 2026-11-02
+tags: ["typescript","generics","functional-programming"]
+draft: true
+source: here
+series: "Functional, with types"
+seriesOrder: 1
+---
+
+> Working outline. Expand this with your own observations from the Functional TypeScript Lab notes before publishing.
+
+## The question
+
+How can a function accept different types without forgetting which type a particular call receives?
+
+## Start with one concrete identity function
+
+Show a string-only function, then the duplication needed for a number-only version. Establish the relationship: the output has the same type as the input.
+
+## Compare unknown, any, and a generic parameter
+
+Use the same identity example throughout. Explain that unknown requires checking before use, any permits unchecked operations, and T links the input and output. A generic is useful because it connects positions in a signature.
+
+```ts
+const identity = <T>(value: T): T => value;
+
+const author = identity("Eric");
+const year = identity(2019);
+```
+
+## Let the reader inspect the inferred types
+
+Plan a TsSandbox with string, number, and object calls. Ask readers to predict each type before inspecting it, then introduce one incorrect assignment. Distinguish a literal type from its broader primitive type when the editor preserves a literal.
+
+## Explain what the signature promises
+
+The signature preserves a type relationship; it does not prove that every possible implementation is pure, meaningful, or free from exceptions.
+
+## Bridge to the next post
+
+An identity function relates one input to one output. Next, preserve a relationship when a function returns another function.
+
+Writing source: Logseq / Functional TypeScript Lab / Generics. Practice: Functional, with types lab 1. Reference: [TypeScript generics](https://www.typescriptlang.org/docs/handbook/2/generics.html).
+

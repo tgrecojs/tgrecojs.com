@@ -15,6 +15,7 @@ import timerViewExhaustiveness from '../../sandbox/timer-view-exhaustiveness.ts?
 import timer from '../../sandbox/timer.ts?raw';
 import timerStartButton from '../../sandbox/timer-start-button.tsx?raw';
 import timerView from '../../sandbox/timer-view.tsx?raw';
+import timerControlButton from '../../sandbox/timer-control-button.tsx?raw';
 import timerComponent from '../../sandbox/timer-component.tsx?raw';
 import timerComponentReducer from '../../sandbox/timer-component-reducer.tsx?raw';
 import useTimer from '../../sandbox/use-timer.ts?raw';
@@ -22,27 +23,79 @@ import timers from '../../sandbox/timers.tsx?raw';
 
 ## Introduction
 
-This post is going to cover using the data model introduced prior in the series. We're going to take a look at using our tagged unions 
+In an attempt to flex my full-stack muscles, I have been spending time putting out content centered around using TypeScript to build deterministic software. Thus far, I've discussed using [discriminated unions](/posts/prevent-impossible-states-pt-1-union-types), and demonstrated [how to apply union types to create finite state machines](/posts/prevent-impossible-states-pt-2-state-transitions). In this post, we'll introduce the view layer into the mix.
 
-In [Part 2](/posts/prevent-impossible-states-pt-2-state-transitions), we defined our timer's states and transitions. Now I want to use that same model to determine what the user sees.
+To recap: our goal for using state machines is to ensure our application code is protected from invalid or "impossible" states. An example of an impossible state might be seeing a "sign in" button in an application that you're already logged in to. This causes confusion, and adds noise to user stories that we're obligated to make as frictionless as possible.
 
-When someone first opens our timer, they should only have the option to start it. They shouldn't be able to pause or reset a timer that hasn't started. We already have the timer's state, so let's use it to decide which controls to show.
 
-## Connecting the timer to React
+### Recapping `TimerState` and `TimerEvent`
 
-Our transition function already takes a state and an event and returns the next state. React's [useReducer](https://react.dev/reference/react/useReducer) lets us reuse that function: React holds the current state, and we send events using `dispatch`.
+I previously laid out the `TimerState` and `TimerEvent` types shown below.
 
-Using the types and transition function from Part 2 in a module called `timer.ts`, we can connect our first button:
+```ts
+type TimerState =
+  | { status: 'idle' }
+  | { status: 'running'; remainingSeconds: number }
+  | { status: 'paused'; remainingSeconds: number }
+  | { status: 'finished' };
 
-<ReactSandbox id="timer-start" title="Timer.tsx" file="Timer.tsx" code={timerStartButton} files={{ 'timer.ts': timer }} />
+type TimerEvent =
+  | { type: 'start'; durationSeconds: number }
+  | { type: 'pause' }
+  | { type: 'resume' }
+  | { type: 'tick' }
+  | { type: 'reset' };
+```
 
-Starting the timer changes the displayed status and removes the Start button. The click handler only sends the event and the transition rules stay in `transition`.
+These are the `state` and `event` values that will be passed into the `transition` function.
 
-## Rendering the controls for each state
 
-The `reset` event is valid in every state, but we don't need to offer a Reset button while the timer is already `idle`.
+```ts
+type Transition = (state: TimerState, event: TimerEvent) => TimerState;
 
-We can use a `TimerView` component to render the controls for each status:
+const transition: Transition = (state, event) => {
+  if (event.type === 'reset') {
+    return { status: 'idle' };
+  }
+
+  switch (state.status) {
+    case 'idle':
+      return event.type === 'start'
+        ? { status: 'running', remainingSeconds: event.durationSeconds }
+        : state;
+
+    case 'running':
+      switch (event.type) {
+        case 'pause':
+          return { status: 'paused', remainingSeconds: state.remainingSeconds };
+        case 'tick':
+          return state.remainingSeconds > 1
+            ? { status: 'running', remainingSeconds: state.remainingSeconds - 1 }
+            : { status: 'finished' };
+        default:
+          return state;
+      }
+
+    case 'paused':
+      return event.type === 'resume'
+        ? { status: 'running', remainingSeconds: state.remainingSeconds }
+        : state;
+
+    case 'finished':
+      return state;
+
+    default: {
+      const unreachable: never = state;
+      return unreachable;
+    }
+  }
+};
+```
+
+With that recap finished, we can move forward with connecting this logic to our UI. While this example might seem fairly barebones, it still demonstrates an incredibly important practice of isolating business logic from the view logic to ensure our UI is fully deterministic.
+
+## Defining our state map
+Before we wire up our UI, let's sketch out how everything should function. The table below explicitly defines the "status -> control" relationship for each `state.status` option.
 
 | Status | Controls |
 | --- | --- |
@@ -51,9 +104,25 @@ We can use a `TimerView` component to render the controls for each status:
 | `paused` | Resume, Reset |
 | `finished` | Reset |
 
+When `state.status` is `idle`, our view will enforce that only the "Start" control is rendered. When `state.status` is `running`, our view will enforce that "Pause" and "Reset" controls are rendered. And so on.
+
+## Connecting the timer to React
+
+The `transition` function is already in the correct shape to be passed into React's [useReducer](https://react.dev/reference/react/useReducer) API. In return, we'll get the `state`, which will give us the `status`, `remainingSeconds`, etc. and `dispatch` will be used to process our `TimerEvent`s.
+
+<ReactSandbox id="timer-start" title="Timer.tsx" file="Timer.tsx" code={timerStartButton} files={{ 'timer.ts': timer }} />
+
+## Rendering the controls for each state
+
+We know that each control needs to render the corresponding actions, so we can abstract that shared logic into a `ControlButton` component. 
+
+<ReactSandbox id="timer-control" title="ControlButton.tsx" file="ControlButton.tsx" code={timerControlButton} files={{ 'timer.ts': timer, 'TimerView.tsx': timerView, 'Timer.tsx': timerComponentReducer }} render="Timer" renderFrom="Timer.tsx" />
+
+`Dispatch<TimerEvent>` describes a function that accepts a `TimerEvent`, so we'll wire our component up to invoke these functions `onClick`, so [dispatch runs when the user clicks](https://react.dev/learn/responding-to-events#adding-event-handlers). `TimerView` is what we'll use to determine with `ControlButton`s are rendered.
+
 ### Catching a missing view
 
-What if we forget to handle the `paused` state? We can use the same [exhaustiveness check](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking) we used in our transition function. Here's a shorter view that returns status text, with the `paused` case deliberately left out:
+We can use the same [exhaustiveness check](https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking) we used in our transition function. Here's a shorter view that returns status text, with the `paused` case deliberately left out:
 
 <TsSandbox id="timer-view-exhaustiveness" title="A missing paused view" code={timerViewExhaustiveness} files={{ 'timer.ts': timer }} />
 
@@ -70,52 +139,63 @@ case 'paused':
   return `Paused: ${state.remainingSeconds} seconds remaining`;
 ```
 
-Try adding it in the editor, then use **Reset code** to restore the missing-case example.
-
-This checks that we've handled every status. It doesn't check that we've included the right buttons inside each case. If we handle `paused` but forget its Resume button, that still type-checks.
+This checks that we've handled every status. It doesn't check that we've included the right buttons inside each case. If we handle `paused` but forget its "Resume" button, that still type-checks.
 
 ### Rendering the buttons
 
 The full component uses that same check. In `TimerView.tsx`:
 
-<ReactSandbox id="timer-view" title="TimerView.tsx" file="TimerView.tsx" code={timerView} files={{ 'timer.ts': timer, 'Timer.tsx': timerComponentReducer }} render="Timer" renderFrom="Timer.tsx" />
+<ReactSandbox id="timer-view" title="TimerView.tsx" file="TimerView.tsx" code={timerView} files={{ 'timer.ts': timer, 'Timer.tsx': timerComponentReducer, 'ControlButton.tsx': timerControlButton }} render="Timer" renderFrom="Timer.tsx" />
 
-Our `Timer` component can now pass the current state and `dispatch` to that view. Replace its earlier implementation in `Timer.tsx` with:
+We're officially ready to use our `Timer` component can now pass the current state and `dispatch` to that view. The final version will look as follows:
 
-<ReactSandbox id="timer" title="Timer.tsx" file="Timer.tsx" code={timerComponentReducer} files={{ 'timer.ts': timer, 'TimerView.tsx': timerView }} />
+<ReactSandbox id="timer" title="Timer.tsx" file="Timer.tsx" code={timerComponentReducer} files={{ 'timer.ts': timer, 'TimerView.tsx': timerView, 'ControlButton.tsx': timerControlButton }} />
 
 We're using our state machine to deterministically render the UI, so we don't need separate state variables to track whether Pause or Resume should appear.
 
 ## Sending events from the UI
 
-Our transition function is our API for managing the timer's state. If someone clicks Pause, we send a `pause` event and let the function determine the next state. We're keeping our business logic out of the view. The view can just take the values it needs to show the appropriate controls.
+Our transition function is our API for managing the timer's state. If someone clicks "Pause", we send a `pause` event and let the function determine the next state. We're keeping our business logic out of the view. The view can just take the values it needs to show the appropriate controls.
 
-I've historically been very anti-`useEffect`. In production, I usually reach for a state management library, or avoid Effects altogether, to keep application logic separate from my view code. For this example, though, a small Effect isolated in a custom hook fits.
+I've historically been very anti-`useEffect` (as per guidance from the [react.js core team](https://react.dev/learn/you-might-not-need-an-effect)). In production systems, I'll reach for a state management library, or something like [TanStack query](https://tanstack.com/query/latest/docs/framework/react/overview) to handle my async logic. Regardless of how it's done, the goal of keeping application logic separate from my view code remains the same. For this example, though, a small `useEffect` isolated in a custom hook fits will have to do.
 
-Right now the timer shows its remaining time but never counts down, so it needs a clock. We keep that subscription in a [custom hook](https://react.dev/learn/reusing-logic-with-custom-hooks), separate from the view. In `useTimer.ts`, `useReducer` manages the state, and `useEffect` sends a `tick` event every second while the status is `running`:
+## Isolating clock logic into a custom hook
 
-<ReactSandbox id="timer-hook" title="useTimer.ts" file="useTimer.ts" code={useTimer} files={{ 'timer.ts': timer, 'TimerView.tsx': timerView, 'Timer.tsx': timerComponent }} render="Timer" renderFrom="Timer.tsx" />
+Right now the timer shows its remaining time but never counts down, so it needs a clock. We keep that subscription in a [custom hook](https://react.dev/learn/reusing-logic-with-custom-hooks), separate from the view. 
 
-`Timer` now calls `useTimer()` where it called `useReducer` before. `TimerView` doesn't change. This Effect only [synchronizes with the browser clock](https://react.dev/learn/you-might-not-need-an-effect), so our rendering logic still derives directly from state. It depends on `state.status` and `dispatch`, so updating `remainingSeconds` doesn't restart the interval. Because it counts interval callbacks, it can drift from wall-clock time.
+<ReactSandbox id="timer-hook" title="useTimer.ts" file="useTimer.ts" code={useTimer} files={{ 'timer.ts': timer, 'TimerView.tsx': timerView, 'Timer.tsx': timerComponent, 'ControlButton.tsx': timerControlButton }} render="Timer" renderFrom="Timer.tsx" />
 
-When a running timer has one second left, the next `tick` returns `{ status: 'finished' }`, which has no `remainingSeconds`, so the view offers only Reset.
+In `useTimer.ts`, `useReducer` manages the state, and `useEffect` sends a `tick` event every second while the status is `running`. With that in place, we can update `Timer` to call `useTimer()`. Our rendering logic still derives directly from state. It depends on `state.status` and `dispatch`, so updating `remainingSeconds` doesn't restart the interval.
 
-The UI only offers actions appropriate to its current state, but other code can still send an event. If `pause` arrives while the timer is `idle`, our transition function intentionally leaves the state unchanged.
+Clicking the "Run" button in the codeblock should display our finished `Timer`. Go on, give it a try.
+~~Because it counts interval callbacks, it can drift from wall-clock time.~~
+
+
+<ReactSandbox id="timer-with-hook" title="Timer.tsx" file="Timer.tsx" code={timerComponent} files={{ 'timer.ts': timer, 'TimerView.tsx': timerView, 'useTimer.ts': useTimer, 'ControlButton.tsx': timerControlButton }} />
+
+As explicitly expressed in our `transition` function, the next `tick` after `state.durationSeconds` reaches `1` returns `{ status: 'finished' }`, causing our the view to update so that only "Reset" is available.
+
+~~The UI only offers actions appropriate to its current state, but other code can still send an event. If `pause` arrives while the timer is `idle`, our transition function intentionally leaves the state unchanged.~~
 
 ## Adding more timers
 
-We only had to write one transition function. Now we can let users create multiple timer widgets, each with its own controls. Each `Timer` calls `useTimer`, so [each instance has its own state](https://react.dev/learn/preserving-and-resetting-state). Pausing or resetting one won't change the state of a second or third timer.
+We've contained the beast, so to speak. Before we wrap up, let's enjoy the fruits of our labor and see how quickly we can extend our code so that users can create multiple timer widgers, each with its only controls. 
+
+Each `Timer` calls `useTimer`, so [each instance has its own state](https://react.dev/learn/preserving-and-resetting-state). Sending a "pause" or a "reset" event to one won't change the state of a second or third timer - each is totally independent, just as we intended.
 
 In `Timers.tsx`:
 
-<ReactSandbox id="timers" title="Timers.tsx" file="Timers.tsx" code={timers} files={{ 'timer.ts': timer, 'TimerView.tsx': timerView, 'Timer.tsx': timerComponent, 'useTimer.ts': useTimer }} />
+<ReactSandbox id="timers" title="Timers.tsx" file="Timers.tsx" code={timers} files={{ 'timer.ts': timer, 'TimerView.tsx': timerView, 'Timer.tsx': timerComponent, 'useTimer.ts': useTimer, 'ControlButton.tsx': timerControlButton }} />
 
-The parent keeps track of which timers exist. Each timer keeps track of its own status and remaining time. We create each ID when the user clicks the button and keep it as a [stable key](https://react.dev/learn/rendering-lists#keeping-list-items-in-order-with-key), so React can identify the existing timers when we add another one.
+
+~~The parent keeps track of which timers exist.~~ Each timer keeps track of its own status and remaining time. We create each ID when the user clicks the button and keep it as a [stable key](https://react.dev/learn/rendering-lists#keeping-list-items-in-order-with-key), so React can identify the existing timers when we add another one.
 
 Try creating two timers, starting both, and pausing or resetting just one. The other timer should keep its state.
 
 ## The lesson
 
-The main benefit for me is that our UI stays in sync with our state. A paused timer gives the user the option to resume or reset it, and each timer is managed independently. We added the ability to create more timers without rewriting the rules for how a timer behaves.
+We've successfully combined discriminated unions, finite state machines to create a fully deterministic user interface. The UI stays in sync with our state. 
+
+The main benefits for me are that our UI stays in sync with our state. A paused timer gives the user the option to resume or reset it, and each timer is managed independently. We added the ability to create more timers without rewriting the rules for how a timer behaves.
 
 The exhaustiveness check catches a missing state case. We still need to check that each view shows the right controls.

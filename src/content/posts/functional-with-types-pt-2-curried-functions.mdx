@@ -1,0 +1,47 @@
+---
+title: "Functional with Types Pt. 2 - Curried Functions"
+description: "Carry input and output types across curried calls with a reusable mapValues function."
+pubDate: 2026-11-02
+tags: ["typescript","generics","functional-programming"]
+draft: true
+source: here
+series: "Functional, with types"
+seriesOrder: 2
+---
+
+> Working outline. Keep the getLengths and multiplyBy10 experiments from your Logseq notes as the central example.
+
+## The question
+
+How do we preserve types when we choose a transformation now and provide its data later?
+
+## Begin with an ordinary map helper
+
+Show the two-argument version first so the reader understands which arguments exist. Then turn mapValues(transform, values) into mapValues(transform)(values). Call this currying. Explain point-free definitions separately: they omit an explicit data parameter when assembling a function.
+
+## Name the relationship between the two calls
+
+```ts
+const mapValues = <A, B>(transform: (value: A) => B) =>
+  (values: readonly A[]): B[] => values.map(transform);
+
+const getLengths = mapValues((value: string) => value.length);
+const multiplyBy10 = mapValues((value: number) => value * 10);
+```
+
+Walk through A, B, and the returned function before discussing reusable validators. Accepting a readonly input array does not make the returned array readonly or freeze anything at runtime.
+
+## Make inference visible at each call
+
+Plan a sandbox that accepts words in getLengths and numbers in multiplyBy10. Then deliberately pass words to multiplyBy10. Show where the compiler reports the mismatch. Explain why a callback input annotation can help: inference has to work at the first call, before the later array arrives.
+
+## Connect this to reusable configuration
+
+The first call fixes behavior; the second uses it. This same shape will later support validate(required, emailFormat)(value), but do not introduce Rule or Validation yet.
+
+## Bridge to the next post
+
+We can reuse each transformation independently. Next, connect several transformations while preserving the types between them.
+
+Writing source: Logseq / Functional TypeScript Lab / Carrying types through point-free functions. Practice: lab 2. Reference: [Generic functions](https://www.typescriptlang.org/docs/handbook/2/functions.html#generic-functions).
+

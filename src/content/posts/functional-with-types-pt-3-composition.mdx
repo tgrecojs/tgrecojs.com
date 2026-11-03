@@ -1,0 +1,53 @@
+---
+title: "Functional with Types Pt. 3 - Composition"
+description: "Connect transformations with typed pipe and compose, then examine what changes for longer pipelines."
+pubDate: 2026-11-02
+tags: ["typescript","composition","functional-programming"]
+draft: true
+source: here
+series: "Functional, with types"
+seriesOrder: 3
+---
+
+> Working outline. Keep fixed-length composition as the explanation of the relationship, and give the variadic implementation its own clearly marked section.
+
+## The question
+
+Can the compiler check every connection between transformations and infer the function produced by their composition?
+
+## Start with the runtime order
+
+For pipe(f, g), evaluate g(f(value)). For compose(g, f), evaluate the same expression. Use unequal input/output types so swapping the order produces a visible mistake. State that these helpers build a function; some libraries call this form flow and reserve pipe for a value-first API.
+
+## Link the three types in the two-function version
+
+```ts
+const pipe2 = <A, B, C>(
+  first: (value: A) => B,
+  second: (value: B) => C
+) => (value: A): C => second(first(value));
+
+const compose2 = <A, B, C>(
+  second: (value: B) => C,
+  first: (value: A) => B
+) => (value: A): C => second(first(value));
+```
+
+Explain A to B to C. Start with concrete transformations and verify both helpers. Then test pipe2(singleton, box) separately: its generic relationship survives this higher-order signature. The runtime-equivalent compose2(box, singleton) is a separate inference experiment, not an automatic guarantee. With the signature above, the generic compose call fails inference in TypeScript 5.9.3; use concrete callback types or explicit type arguments to demonstrate its runtime order before exploring that limitation. Reversing singleton and box changes the intended value shape, and each example must call its own returned function.
+
+## Add one more transformation
+
+Use a string to number to boolean chain. Compare the correct inferred signature with a deliberately mismatched link. Keep generic singleton/box preservation as a separate test from concrete string/number transformations.
+
+## Extend to variadic composition
+
+Separate accepting a runtime list of functions from statically checking a heterogeneous tuple of functions. Show why replacing the tuple with an array of unknown-returning functions forgets the connections. Decide and document empty-pipeline behavior, then check one, three, and several stages, incompatible neighbors, and the same operations in reverse compose order.
+
+Treat recursive tuple/conditional types and generic inference limits as an advanced section or a standalone follow-up if they overwhelm the main example. Do not require mastery of that implementation before readers can understand the validator factory: its outer pipeline needs only normalization followed by validation. Avoid promising literally unbounded compiler recursion or universal inference for arbitrary generic callbacks.
+
+## Bridge to the next post
+
+Normalization can keep producing strings. Validation adds a new question: how should the pipeline represent failure?
+
+Writing source: Logseq / Carrying types through composition and Extending for variadic functions. Practice: lab 3; lab 4 introduces tuple tools, not a complete variadic-pipe solution. References: [TS 3.4 higher-order inference](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-4.html), [TS 4.0 variadic tuples](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-0.html).
+
