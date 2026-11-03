@@ -76,6 +76,15 @@ const path = Astro.url.pathname.replace(/\/$/, '') || '/';
     <meta name="twitter:description" content={description} />
     <meta name="twitter:creator" content="@tgrecojs" />
     <Analytics />
+    {import.meta.env.PROD && (
+      <script
+        is:inline
+        defer
+        src="https://cloud.umami.is/script.js"
+        data-website-id="32249bbe-294f-4fce-9839-c0b8f1588bea"
+        data-domains="tgrecojs.com,www.tgrecojs.com"
+      ></script>
+    )}
   </head>
   <body>
     <div class="wrap">
