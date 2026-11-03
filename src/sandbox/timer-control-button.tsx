@@ -1,5 +1,5 @@
-import type { Dispatch } from "react";
-import type { TimerEvent } from "./timer";
+import type { Dispatch } from 'react';
+import type { TimerEvent } from './timer';
 
 export type TimerControlProps = {
   event: TimerEvent;

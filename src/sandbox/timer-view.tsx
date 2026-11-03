@@ -1,6 +1,6 @@
-import type { Dispatch } from "react";
-import type { TimerEvent, TimerState } from "./timer";
-import { ControlButton } from "./ControlButton";
+import type { Dispatch } from 'react';
+import type { TimerEvent, TimerState } from './timer';
+import { ControlButton } from './ControlButton';
 
 type TimerViewProps = {
   state: TimerState;
@@ -9,38 +9,38 @@ type TimerViewProps = {
 
 export const TimerView = ({ state, dispatch }: TimerViewProps) => {
   switch (state.status) {
-    case "idle":
+    case 'idle':
       return (
         <ControlButton
           label="Start"
-          event={{ type: "start", durationSeconds: 30 }}
+          event={{ type: 'start', durationSeconds: 30 }}
           dispatch={dispatch}
         />
       );
 
-    case "running":
+    case 'running':
       return (
         <section>
           <p>Running: {state.remainingSeconds} seconds remaining</p>
-          <ControlButton label="Pause" event={{ type: "pause" }} dispatch={dispatch} />
-          <ControlButton label="Reset" event={{ type: "reset" }} dispatch={dispatch} />
+          <ControlButton label="Pause" event={{ type: 'pause' }} dispatch={dispatch} />
+          <ControlButton label="Reset" event={{ type: 'reset' }} dispatch={dispatch} />
         </section>
       );
 
-    case "paused":
+    case 'paused':
       return (
         <section>
           <p>Paused: {state.remainingSeconds} seconds remaining</p>
-          <ControlButton label="Resume" event={{ type: "resume" }} dispatch={dispatch} />
-          <ControlButton label="Reset" event={{ type: "reset" }} dispatch={dispatch} />
+          <ControlButton label="Resume" event={{ type: 'resume' }} dispatch={dispatch} />
+          <ControlButton label="Reset" event={{ type: 'reset' }} dispatch={dispatch} />
         </section>
       );
 
-    case "finished":
+    case 'finished':
       return (
         <section>
           <p>Timer finished</p>
-          <ControlButton label="Reset" event={{ type: "reset" }} dispatch={dispatch} />
+          <ControlButton label="Reset" event={{ type: 'reset' }} dispatch={dispatch} />
         </section>
       );
 
