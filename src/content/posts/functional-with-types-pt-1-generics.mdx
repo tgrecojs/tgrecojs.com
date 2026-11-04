@@ -3,7 +3,7 @@ title: "Generics in TypeScript"
 description: "Use generic type parameters to preserve relationships between inputs and outputs without giving up inference."
 pubDate: 2026-11-02
 tags: ["typescript","generics","functional-programming"]
-draft: true
+draft: false
 source: here
 ---
 
@@ -82,8 +82,8 @@ If you extend the code block with an assignment that has `first` take in an arra
 
 ## Generic reflection
 
-And thus concludes our exploring of generics in TypeScript. To recap, we learned how to strongly type `identity` so that TypeScript preserves the input values type, and then extending this to the `first` function.... {/* how can I use my verbiage, a solid wrap-up, reflection section - only a few sentences. One major thing to note is that the last sentence of this section on taking "first steps towards strongly type functional programming in TypeScript" is a MAJOR point that i want to hit home. many future posts will be centered around functional programming in typescript, and generics are at the base of that. */}
+And thus concludes our exploration of generics in TypeScript. To recap, we learned how to strongly type `identity` so that TypeScript preserves the input value's type, and then extended this idea to the `first` function so it preserves an array's element type. In both cases, [generics](https://www.typescriptlang.org/docs/handbook/2/generics.html) let us write one function that works across many types without forgetting which type a particular call receives.
 
-With [generics](https://www.typescriptlang.org/docs/handbook/2/generics.html), `identity` preserves a value's type and `first` preserves an array's element type in its result. We've taken our first steps toward strongly typed functional programming in TypeScript by writing functions we can reuse without losing type information.
+Small, reusable functions that keep their types intact are what functional programming is built from, and with generics in hand, we've taken our first steps toward strongly typed functional programming in TypeScript!
 
 {/* PFU: Adding tags at the bottom here, or "related" posts section that links to related posts. I don't want to force the reader to follow along or use the gimmicky "stay tuned for post 2". I want posts to complement eachother, but also be a standalone source of useful information*/}
