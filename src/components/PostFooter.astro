@@ -1,0 +1,122 @@
+---
+// Everything after a post's last paragraph, in three bands under one rule: the author's
+// sign-off with the share controls, the chronological neighbours, and a short list of
+// related posts. Shared links land readers on a post, not the home page, so this is the
+// first place most of them meet the rest of the site. The site footer right below carries
+// the social links, so they are not repeated here.
+import { site } from '../site';
+import { neighbours, postDot, related, type Post } from '../lib/posts';
+import ShareButton from './ShareButton.astro';
+
+interface Props {
+  post: Post;
+  posts: Post[];
+  url: string;
+}
+const { post, posts, url } = Astro.props;
+const { newer, older } = neighbours(post, posts);
+// The plate already shows the neighbours, so the related list never repeats them.
+const shown = new Set([older?.id, newer?.id]);
+const more = related(post, posts, 6).filter((p) => !shown.has(p.id)).slice(0, 3);
+// The bio is the site description from src/site.ts. When it opens with the author's
+// name, the name is set in bold and the rest follows as written.
+const rest = site.description.startsWith(site.author) ? site.description.slice(site.author.length) : null;
+---
+
+<footer class="post-end">
+  <section class="signoff" aria-label="About the author">
+    <p class="bio">{rest === null ? site.description : <><b>{site.author}</b>{rest}</>}</p>
+    <ShareButton title={post.data.title} url={url} />
+  </section>
+
+  {(older || newer) && (
+    <nav class="post-nav" aria-label="Previous and next posts">
+      {older && (
+        <a class="post-nav__link" href={`/posts/${older.id}`} rel="prev">
+          <span class="mono post-nav__label"><span aria-hidden="true">← </span>Previous post</span>
+          <span class="post-nav__title">{older.data.title}</span>
+        </a>
+      )}
+      {newer && (
+        <a class="post-nav__link post-nav__link--next" href={`/posts/${newer.id}`} rel="next">
+          <span class="mono post-nav__label">Next post<span aria-hidden="true"> →</span></span>
+          <span class="post-nav__title">{newer.data.title}</span>
+        </a>
+      )}
+    </nav>
+  )}
+
+  {more.length > 0 && (
+    <section class="related" aria-labelledby="related-heading">
+      <h2 id="related-heading" class="eyebrow">Related</h2>
+      <ul class="related-list">
+        {more.map((p) => (
+          <li>
+            <i class={`dot ${postDot(p, posts)}`} aria-hidden="true" />
+            <a class="related-title" href={`/posts/${p.id}`}>{p.data.title}</a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+</footer>
+
+<style>
+  /* One rule opens the whole ending; the bands below it are separated by space alone. */
+  .post-end { margin-top: 3.5rem; padding-top: 1.75rem; border-top: 1.5px solid var(--ink); display: grid; gap: 2.75rem; }
+
+  .signoff { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1rem 2rem; }
+  .bio { margin: 0; max-width: 28rem; color: var(--ink-2); text-wrap: pretty; }
+  .bio b { color: var(--ink); font-weight: 600; }
+  @media (max-width: 560px) { .signoff { grid-template-columns: 1fr; } }
+
+  /* Previous and next share one plate: ink border, cobalt shadow, a hairline between.
+     The whole plate is the link, so the hit area is generous on a phone. */
+  .post-nav {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    border: 1.5px solid var(--ink); border-radius: 6px; box-shadow: 3px 3px 0 var(--shadow);
+    background: var(--paper); overflow: hidden;
+  }
+  .post-nav__link {
+    display: flex; flex-direction: column; gap: .35rem; min-width: 0;
+    padding: 1rem 1.1rem 1.1rem; text-decoration: none; color: var(--ink);
+    transition: background-color 150ms ease-out;
+  }
+  .post-nav__link + .post-nav__link { border-left: 1px solid var(--rule); }
+  .post-nav__link--next { text-align: right; align-items: flex-end; }
+  .post-nav__link:hover { background: var(--paper-2); }
+  .post-nav__link:focus-visible { outline: var(--focus-ring); outline-offset: -4px; border-radius: 4px; }
+  .post-nav__label { color: var(--ink-3); }
+  .post-nav__title {
+    font-family: var(--f-display); font-weight: 600; font-optical-sizing: auto;
+    font-size: 1.1rem; line-height: 1.25; letter-spacing: -.01em; text-wrap: balance;
+    background-image: linear-gradient(var(--accent), var(--accent)); background-size: 0 2px;
+    background-repeat: no-repeat; background-position: 0 100%; transition: background-size .18s cubic-bezier(.2, 0, 0, 1);
+  }
+  .post-nav__link--next .post-nav__title { background-position: 100% 100%; }
+  .post-nav__link:hover .post-nav__title { background-size: 100% 2px; }
+  @media (max-width: 520px) {
+    .post-nav { grid-template-columns: 1fr; }
+    .post-nav__link + .post-nav__link { border-left: 0; border-top: 1px solid var(--rule); }
+    .post-nav__link--next { text-align: left; align-items: flex-start; }
+    .post-nav__link--next .post-nav__title { background-position: 0 100%; }
+  }
+
+  /* Related posts are one line each: the dot and the title. Dates and reading times
+     live on the home list; here they only add noise. */
+  .eyebrow { font: 600 .72rem/1.4 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 .5rem; }
+  .related-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .1rem; }
+  .related-list li { display: grid; grid-template-columns: 14px 1fr; gap: 0 1rem; align-items: center; }
+  .related-title {
+    justify-self: start; display: inline-block; padding-block: .7rem;
+    font-family: var(--f-display); font-weight: 600; font-optical-sizing: auto;
+    font-size: 1.1rem; line-height: 1.25; letter-spacing: -.01em; color: var(--ink); text-decoration: none; text-wrap: balance;
+    background-image: linear-gradient(var(--accent), var(--accent)); background-size: 0 2px;
+    background-repeat: no-repeat; background-position: 0 100%; transition: background-size .18s cubic-bezier(.2, 0, 0, 1);
+  }
+  .related-title:hover { background-size: 100% 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .post-nav__link, .post-nav__title, .related-title { transition: none; }
+  }
+</style>

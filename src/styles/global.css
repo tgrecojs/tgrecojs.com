@@ -81,7 +81,9 @@ a:focus-visible { outline: var(--focus-ring); outline-offset: 3px; border-radius
 /* ─── Labels, dots, tags ─── */
 .mono { font: 500 .75rem/1.4 var(--f-mono); color: var(--ink-3); letter-spacing: .03em; font-variant-numeric: tabular-nums; }
 .dot { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--ink); display: inline-block; flex: none; }
-.dot-here { background: var(--cobalt); }
+/* Lists alternate the two: cobalt on even slots, mustard on odd (see dotClass in src/lib/posts.ts). */
+.dot-a, .dot-here { background: var(--cobalt); }
+.dot-b { background: var(--mustard); }
 .tags { display: flex; gap: .5rem; flex-wrap: wrap; }
 /* Tags stay small to look at; the ::after overlay gives each a 44px-tall hit area. */
 .tag { position: relative; font: 500 .72rem/1 var(--f-mono); color: var(--ink-2); border: 1px solid var(--rule); border-radius: 999px; padding: .35rem .6rem; text-decoration: none; }
@@ -89,8 +91,12 @@ a:focus-visible { outline: var(--focus-ring); outline-offset: 3px; border-radius
 a.tag:hover { border-color: var(--ink); color: var(--ink); }
 
 /* ─── Footer ─── */
-.footer { margin-top: 4.5rem; padding-top: 1rem; border-top: 1.5px solid var(--ink); display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; font: 500 .72rem/1.5 var(--f-mono); color: var(--ink-3); letter-spacing: .04em; }
-.footer a { color: var(--ink-2); }
+/* Links are small to look at but 44px tall to tap; the row's height comes from them. */
+.footer { margin-top: 4.5rem; padding-top: .75rem; border-top: 1.5px solid var(--ink); font: 500 .72rem/1.5 var(--f-mono); color: var(--ink-3); letter-spacing: .04em; }
+.footer-row { display: flex; justify-content: space-between; align-items: center; gap: 0 1rem; flex-wrap: wrap; }
+.footer-nav { display: flex; flex-wrap: wrap; gap: 0 1.1rem; }
+.footer a { color: var(--ink-2); display: inline-flex; align-items: center; min-height: 44px; }
+.footer a:hover { color: var(--ink); }
 
 /* ─── Post body ─── */
 .prose { font-size: 1.0625rem; line-height: 1.7; }

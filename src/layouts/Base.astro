@@ -3,6 +3,8 @@ import '../styles/global.css';
 import Analytics from '@vercel/analytics/astro';
 import ThemeScript from '../components/ThemeScript.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
+import Webring from '../components/Webring.astro';
+import { site } from '../site';
 
 interface Props {
   title: string;
@@ -16,16 +18,17 @@ interface Props {
   type?: 'website' | 'article';
 }
 
-const SITE_NAME = 'Thomas Greco';
+const SITE_NAME = site.author;
 const {
   title,
-  description = 'Thomas Greco writes about TypeScript, functional programming, and the things he builds on weekends.',
+  description = site.description,
   canonical,
-  image,
+  // Every page gets a large card: posts pass their own, everything else uses the site card.
+  image = '/og/home.png',
   imageAlt = title,
-  imageWidth,
-  imageHeight,
-  imageType,
+  imageWidth = 1200,
+  imageHeight = 630,
+  imageType = 'image/png',
   type = 'website',
 } = Astro.props;
 
@@ -62,19 +65,18 @@ const path = Astro.url.pathname.replace(/\/$/, '') || '/';
     <meta property="og:url" content={pageUrl.href} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    {image && <>
-      <meta property="og:image" content={new URL(image, Astro.site).href} />
-      <meta property="og:image:alt" content={imageAlt} />
-      {imageWidth && <meta property="og:image:width" content={String(imageWidth)} />}
-      {imageHeight && <meta property="og:image:height" content={String(imageHeight)} />}
-      {imageType && <meta property="og:image:type" content={imageType} />}
-      <meta name="twitter:image" content={new URL(image, Astro.site).href} />
-      <meta name="twitter:image:alt" content={imageAlt} />
-    </>}
-    <meta name="twitter:card" content={image ? 'summary_large_image' : 'summary'} />
+    <meta property="og:image" content={new URL(image, Astro.site).href} />
+    <meta property="og:image:alt" content={imageAlt} />
+    <meta property="og:image:width" content={String(imageWidth)} />
+    <meta property="og:image:height" content={String(imageHeight)} />
+    <meta property="og:image:type" content={imageType} />
+    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
-    <meta name="twitter:creator" content="@tgrecojs" />
+    <meta name="twitter:image" content={new URL(image, Astro.site).href} />
+    <meta name="twitter:image:alt" content={imageAlt} />
+    <meta name="twitter:creator" content={site.handle} />
+    <slot name="head" />
     <Analytics />
     {import.meta.env.PROD && (
       <script
@@ -98,11 +100,15 @@ const path = Astro.url.pathname.replace(/\/$/, '') || '/';
       </main>
 
       <footer class="footer">
-        <span>© {new Date().getFullYear()} Thomas Greco</span>
-        <span>
-          <a href="/rss.xml">RSS</a> · <a href="https://github.com/tgrecojs" rel="me">GitHub</a> ·
-          <a href="https://x.com/tgrecojs" rel="me">Twitter</a> · <a href="https://hindleymilner.com">Hindley Milner Systems</a>
-        </span>
+        <Webring />
+        <div class="footer-row">
+          <span>© {new Date().getFullYear()} {site.author}</span>
+          <nav class="footer-nav" aria-label="Elsewhere">
+            {site.links.map((l) => (
+              <a href={l.href} rel={'rel' in l ? l.rel : undefined}>{l.label}</a>
+            ))}
+          </nav>
+        </div>
       </footer>
     </div>
 
