@@ -22,9 +22,24 @@ npm run new-post -- --title "What I saw tonight" --tags telescope,sky
 ```
 
 Fill in `description`, write, set `draft: false` when it is ready. Frontmatter fields are
-listed in `src/content.config.ts`. 
+listed in `src/content.config.ts`.
 
-Note: in code block post, "PFU" means "Prosective Future Update". where you see that in code, in blog posts, it is a note of something I'd likely want to come back to.
+In post comments, **PFU** means **Prospective Future Update**. Preserve these notes:
+they record ideas to revisit later, rather than work required before publication.
+Other editorial comments describe changes to address in the current draft.
+
+### Working with agents
+
+Repository-wide writing and editing conventions live in [AGENTS.md](AGENTS.md).
+The repeatable proofreading workflow lives in
+[`.agents/skills/proofread-post/SKILL.md`](.agents/skills/proofread-post/SKILL.md).
+In Codex, ask `$proofread-post` to review or edit a named post. For an agent that
+does not discover these files automatically, explicitly ask it to read them.
+
+The draft in this repo is the publication copy. Logseq remains a personal learning
+notebook; agents do not need access to it for a normal proofreading pass. Supply a
+specific notebook page when its experiments are relevant, and treat it as read-only
+unless an update is requested.
 
 To embed a Colorfigures figure, drop its self-contained HTML in `public/figures/` and add
 `figure: /figures/name.html` to the frontmatter. It renders above the post body in an
