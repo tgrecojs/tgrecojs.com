@@ -1,5 +1,5 @@
 ---
-title: "Functional with Types Pt. 1 - Generics"
+title: "Generics in TypeScript"
 description: "Use generic type parameters to preserve relationships between inputs and outputs without giving up inference."
 pubDate: 2026-11-02
 tags: ["typescript","generics","functional-programming"]
@@ -9,38 +9,94 @@ series: "Functional, with types"
 seriesOrder: 1
 ---
 
-> Working outline. Expand this with your own observations from the Functional TypeScript Lab notes before publishing.
+import TsSandbox from '../../components/ts-sandbox/TsSandbox.astro';
+import identityUnknown from '../../sandbox/generics-identity-unknown.ts?raw';
+import identityAny from '../../sandbox/generics-identity-any.ts?raw';
+import identityGeneric from '../../sandbox/generics-identity.ts?raw';
+import firstItem from '../../sandbox/generics-first-item.ts?raw';
 
-## The question
+{/* Ported from Logseq / Generics. Continue editing the publication draft here; the notebook remains a record of experiments. The FP introduction is now in functional-programming-101.mdx. */}
 
-How can a function accept different types without forgetting which type a particular call receives?
+How can we type a function so that it accepts different types without forgetting which type a particular call receives?
 
-## Start with one concrete identity function
+The answer is *generics*. Generics let us describe a relationship between types, allowing functions to process inputs and produce outputs of varying shapes while preserving the information that connects them.
 
-Show a string-only function, then the duplication needed for a number-only version. Establish the relationship: the output has the same type as the input.
+## Our first generic
 
-## Compare unknown, any, and a generic parameter
+{ /* PFU: Update `identity` to point to fp 101 posts introducing it */}
+The starting point for us will be to describe the identity function:
 
-Use the same identity example throughout. Explain that unknown requires checking before use, any permits unchecked operations, and T links the input and output. A generic is useful because it connects positions in a signature.
+```js
+const identity = value => value;
+```
+
+TypeScript gives us a few options for typing this. We can use `unknown`, `any`, or a generic type parameter. The runtime behavior of identity stays the same, but what doesn't stay the same is what changes the information the TypeScript compiler provides about its result.
+
+## Returning unknown
+
+We can accept an `unknown` value and return it. At runtime, passing in a string still gives us that string back. But the return type tells us that the result is unknown.
+
+<TsSandbox id="generics-identity-unknown" title="Identity returning unknown" code={identityUnknown} />
+
+The last line intentionally produces a type error: the compiler won't allow us to call `toUpperCase` on a value whose type is `unknown`. We could check whether the result is a `string`, but the caller already supplied a `string`. We have lost that relationship in the signature.
+
+## Returning `any`
+
+Using `any` makes the error disappear, but it also allows an operation that does not make sense for the supplied value:
+
+<TsSandbox id="generics-identity-any" title="Identity returning any" code={identityAny} />
+
+This code type-checks, but once it's executed, the call to `toFixed` fails because the string `thomas` does not have that number method. `any` has removed the check that would have caught the mistake.
+
+## Preserving the type
+
+The question is: how to retain the input type rather than discard it or turn off checking. This is where a type parameter helps:
 
 ```ts
 const identity = <T>(value: T): T => value;
-
-const author = identity("Eric");
-const year = identity(2019);
 ```
 
-## Let the reader inspect the inferred types
+The above code block expresses the following:
 
-Plan a TsSandbox with string, number, and object calls. Ask readers to predict each type before inspecting it, then introduce one incorrect assignment. Distinguish a literal type from its broader primitive type when the editor preserves a literal.
+- `<T>` declares a type parameter for the function.
+- `value: T` gives the input that type.
+- `: T` gives the output the same type.
 
-## Explain what the signature promises
+For `identity`, we want the result to preserve the input’s type. Using `T` for both the parameter and return type describes that relationship. TypeScript can infer `T` from the argument, so we usually don’t need to specify it ourselves.
 
-The signature preserves a type relationship; it does not prove that every possible implementation is pure, meaningful, or free from exceptions.
+<TsSandbox id="generics-identity" title="Identity preserving its input type" code={identityGeneric} />
 
-## Bridge to the next post
+Running the code above shows that the `result` assignment can access all of the methods globally available for `string` types, and the `year` assignmentcan access all of the methods globally available for `number`. Now we're finally getting somewhere! { /* Now we're finally getting back to our happy place. */}
 
-An identity function relates one input to one output. Next, preserve a relationship when a function returns another function.
+Uncomment the last line to try `.toFixed` on the string and see the compiler catching the mistake.
 
-Writing source: Logseq / Functional TypeScript Lab / Generics. Practice: Functional, with types lab 1. Reference: [TypeScript generics](https://www.typescriptlang.org/docs/handbook/2/generics.html).
+~~The implementation returns the same value, while the signature describes the input/output type relationship. That signature does not prove the implementation is pure or free from exceptions.~~
 
+## A practical example: the first item
+
+This exercising in typing `identity` makes the relationship input/output relationshop easy to see. Let's quickly extend the use of generics to a function that retrieves the first item from an array, all the while preserving the typing capabilities provided to us.
+
+Below, the `first` function selects the first item from an array.
+
+~~We can use the same idea in a function that retrieves the first item from a collection of titles or posts:~~
+
+<TsSandbox id="generics-first-item" title="Get the first item without losing its type" code={firstItem} />
+
+~~An empty array has no first item, so undefined is part of the return type.~~
+
+{/* I'm not sure if the sentence below should go above the code block, or after. Thoughts?  */}
+Here, `T` describes the array's element type. The input is a `readonly array` of type `T`, and the output is either a `T` or, in in the case of an empty array, `undefined`.
+
+When we pass in an array of strings, the result is a `string` or `undefined`. When we pass in an array of post objects, the result retains the `title` and `draft` fields, or it is `undefined`. If you modify the example so that 
+
+We can use one implementation for both without forfeiting any information about what a particular array contains.
+
+Try adding another field to the objects in the `posts` array and you'll see that field become available on `firstPost`. {/* I like what this next sentence is saying, but how can we reword it ? */} ~~Then try passing an array of numbers and using a string method on the result.~~
+
+## Wrap-up
+
+And thus concludes our detailed look at [generics](https://www.typescriptlang.org/docs/handbook/2/generics.html) in TypeScript, and how they allow to preserve type information through the use of templates. We've officially laid the foundation we need in order to begin writing strongly typed functional programs. {/** how can i word that last sentence better */}
+
+~~We have described the relationship between an input and an output. Next, we will preserve types when a function returns another function, using a curried map helper.~~
+
+{/* PFU: Adding tags at the bottom here, or "related" posts section that links to related posts. I don't want to force the reader to follow along or use the gimmicky "stay tuned for post 2". I want posts to complement eachother, but also be a standalone source of useful information*/}

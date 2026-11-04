@@ -1,0 +1,101 @@
+---
+title: "Functional Programming 101"
+description: "An introduction to pure functions, immutable updates, explicit side effects, and composition using small JavaScript examples."
+pubDate: 2026-11-03
+tags: ["javascript","functional-programming"]
+draft: true
+source: here
+---
+
+{/* Standalone companion to Functional, with types. Keep the numbered series starting with Generics. Source notes: Logseq / Generics. */}
+
+> Draft scaffold: the opening and composition examples come from my learning notes. The prompts below mark the sections I still want to develop.
+
+Functional programming revolves around building systems from functions, with an emphasis on predictable transformations. Pure functions give us a useful starting point: their results depend on their inputs, and evaluating them does not produce observable side effects.
+
+## Pure functions
+
+A pure function is a function that:
+
+- given the same inputs, always returns the same output;
+- has no observable side effects.
+
+```js
+const addTen = value => value + 10;
+const multiplyBy2 = value => value * 2;
+const squareNum = value => value * value;
+
+addTen(10); // 20
+multiplyBy2(20); // 40
+squareNum(40); // 1600
+```
+
+These small functions can be used together or in isolation to compute a desired output. For these examples, assume their inputs are numbers.
+
+> Writing prompt: explain why predictable results make these functions easy to test. Contrast one of them with a function whose answer changes because it reads a mutable variable outside the function.
+
+## Avoiding shared mutable state
+
+> Writing prompt: show two functions sharing an object. Let one mutate it, then show how that changes what the other observes. Rewrite the update to return a new object and keep the original unchanged.
+
+The distinction to explain is shared **mutable** state. An application can have state, and functions can share immutable values. The goal is to make changes explicit rather than have one function unexpectedly change data another function depends on.
+
+## Side effects still have a place
+
+> Writing prompt: use saving a form as the example. Separate a pure transformation of its values from the API request that saves them. Identify what each function returns and which operation interacts with the outside world.
+
+Calls to an API, writing to storage, and changing the DOM are useful effects. Keep the transformations understandable on their own and make the points where effects occur visible.
+
+## Building functions from functions
+
+We can combine the arithmetic functions from the first example into a pipeline. First, write the nested calls so the order is visible:
+
+```js
+squareNum(multiplyBy2(addTen(10))); // 1600
+```
+
+The value starts at 10, becomes 20 after addTen, becomes 40 after multiplyBy2, and finally becomes 1600 after squareNum.
+
+The pipe helper lets us list those transformations in the order they run:
+
+```js
+const pipe = (...fns) => initialValue =>
+  fns.reduce((value, fn) => fn(value), initialValue);
+
+const addTenAndMultiplyBy2 = pipe(addTen, multiplyBy2);
+const addTenAndDoubleItAndSquare = pipe(addTen, multiplyBy2, squareNum);
+
+addTenAndMultiplyBy2(10); // 40
+addTenAndDoubleItAndSquare(10); // 1600
+```
+
+The compose helper lists the same transformations in the opposite argument order:
+
+```js
+const compose = (...fns) => initialValue =>
+  fns.reduceRight((value, fn) => fn(value), initialValue);
+
+const addTenAndMultiplyBy2 = compose(multiplyBy2, addTen);
+const addTenAndDoubleItAndSquare = compose(squareNum, multiplyBy2, addTen);
+
+addTenAndMultiplyBy2(10); // 40
+addTenAndDoubleItAndSquare(10); // 1600
+```
+
+Each block builds on the arithmetic definitions above and demonstrates an alternative ordering of the same work.
+
+> Writing prompt: try removing squareNum, then predict the new result before running the code. Explain how each function accepts the result produced by the previous one. Save the TypeScript signatures and generic inference for the numbered series.
+
+## Where types come in
+
+The transformations in this post use JavaScript. TypeScript adds another question: can we describe the relationships between inputs and outputs so the compiler can check how we use and connect functions?
+
+That question is the starting point for the generics post. Readers can begin there directly; this introduction is optional context.
+
+{/* Add a public link to /posts/functional-with-types-pt-1-generics when that draft is published. */}
+
+## References to work from
+
+- [Pure functions and controlled effects](https://mostly-adequate.gitbook.io/mostly-adequate-guide/ch03)
+- My arithmetic and composition experiments in Logseq / Generics
+

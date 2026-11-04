@@ -22,7 +22,9 @@ npm run new-post -- --title "What I saw tonight" --tags telescope,sky
 ```
 
 Fill in `description`, write, set `draft: false` when it is ready. Frontmatter fields are
-listed in `src/content.config.ts`.
+listed in `src/content.config.ts`. 
+
+Note: in code block post, "PFU" means "Prosective Future Update". where you see that in code, in blog posts, it is a note of something I'd likely want to come back to.
 
 To embed a Colorfigures figure, drop its self-contained HTML in `public/figures/` and add
 `figure: /figures/name.html` to the frontmatter. It renders above the post body in an
