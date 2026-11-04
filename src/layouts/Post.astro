@@ -1,17 +1,33 @@
 ---
 import Base from './Base.astro';
 import Figure from '../components/Figure.astro';
-import type { CollectionEntry } from 'astro:content';
+import PostFooter from '../components/PostFooter.astro';
+import { formatDate, getPosts, minutesRead, postDot, type Post } from '../lib/posts';
+import { site } from '../site';
 
 interface Props {
-  post: CollectionEntry<'posts'>;
+  post: Post;
 }
 
 const { post } = Astro.props;
-const { title, description, pubDate, updatedDate, tags, series, seriesOrder, minutesRead, figure } =
-  post.data;
+const { title, description, pubDate, updatedDate, tags, series, seriesOrder, figure } = post.data;
 
-const fmt = (d: Date) => d.toLocaleDateString('en-GB', { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' });
+// The published list, newest first: it decides this post's dot colour and its neighbours.
+const posts = await getPosts();
+const url = new URL(`/posts/${post.id}`, Astro.site).href;
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: title,
+  description,
+  datePublished: pubDate.toISOString(),
+  ...(updatedDate && { dateModified: updatedDate.toISOString() }),
+  author: { '@type': 'Person', name: site.author, url: Astro.site?.href },
+  image: new URL(`/og/${post.id}.png`, Astro.site).href,
+  url,
+  keywords: tags.join(', '),
+};
 ---
 
 <Base
@@ -19,18 +35,23 @@ const fmt = (d: Date) => d.toLocaleDateString('en-GB', { timeZone: 'UTC', year: 
   description={description}
   type="article"
   image={`/og/${post.id}.png`}
-  imageAlt={`${title}, by Thomas Greco`}
-  imageWidth={1200}
-  imageHeight={630}
-  imageType="image/png"
+  imageAlt={`${title}, by ${site.author}`}
 >
+  <Fragment slot="head">
+    <meta property="article:published_time" content={pubDate.toISOString()} />
+    {updatedDate && <meta property="article:modified_time" content={updatedDate.toISOString()} />}
+    <meta property="article:author" content={site.author} />
+    {tags.map((tag) => <meta property="article:tag" content={tag} />)}
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  </Fragment>
+
   <article class="post">
     <header class="post-header">
       <div class="meta mono">
-        <i class="dot dot-here" aria-hidden="true"></i>
-        <time datetime={pubDate.toISOString()}>{fmt(pubDate)}</time>
-        {updatedDate && <span>updated {fmt(updatedDate)}</span>}
-        {minutesRead ? <span>{minutesRead} min</span> : null}
+        <i class={`dot ${postDot(post, posts)}`} aria-hidden="true"></i>
+        <time datetime={pubDate.toISOString()}>{formatDate(pubDate)}</time>
+        {updatedDate && <span>updated {formatDate(updatedDate)}</span>}
+        <span>{minutesRead(post)} min</span>
         {series && (
           <span>
             {series}{seriesOrder && `, part ${seriesOrder}`}
@@ -53,6 +74,8 @@ const fmt = (d: Date) => d.toLocaleDateString('en-GB', { timeZone: 'UTC', year: 
     <div class="prose">
       <slot />
     </div>
+
+    <PostFooter post={post} posts={posts} url={url} />
   </article>
 </Base>
 

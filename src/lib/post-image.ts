@@ -8,6 +8,7 @@ const require = createRequire(import.meta.url);
 const fonts = Promise.all([
   readFile(require.resolve('@fontsource/ibm-plex-serif/files/ibm-plex-serif-latin-600-normal.woff')),
   readFile(require.resolve('@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff')),
+  readFile(require.resolve('@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-400-normal.woff')),
 ]);
 
 // Plex has no emoji, so emoji in a title are drawn from Twemoji's SVGs (graphics CC-BY 4.0,
@@ -30,9 +31,13 @@ const loadAdditionalAsset = async (languageCode: string, segment: string) => {
   }
 };
 
-interface PostImage {
+interface Card {
   title: string;
-  pubDate: Date;
+  /* Drawn under the title. X and LinkedIn no longer show og:description, so the
+     card itself carries the one-line summary that every network still displays. */
+  description?: string;
+  /* Top-right corner: the post date, or nothing for the site card. */
+  pubDate?: Date;
 }
 
 type Element = {
@@ -44,11 +49,15 @@ type Element = {
 const element = (type: string, style: Element['props']['style'], children: Element['props']['children']): Element =>
   ({ type, key: null, props: { style, children } });
 
-export const renderPostImage = async ({ title, pubDate }: PostImage) => {
-  const [serif, mono] = await fonts;
-  const date = pubDate.toLocaleDateString('en-GB', {
+export const renderCard = async ({ title, description, pubDate }: Card) => {
+  const [serif, mono, sans] = await fonts;
+  const date = pubDate?.toLocaleDateString('en-GB', {
     timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric',
   });
+  // A description takes two or three lines, so the title steps down a size to leave room.
+  const titleSize = description
+    ? title.length > 90 ? 44 : title.length > 55 ? 54 : 64
+    : title.length > 110 ? 48 : title.length > 65 ? 60 : 72;
   const svg = await satori(
     element('div', {
       width: 1200, height: 630, boxSizing: 'border-box', display: 'flex', flexDirection: 'column',
@@ -60,18 +69,23 @@ export const renderPostImage = async ({ title, pubDate }: PostImage) => {
         paddingBottom: 26, borderBottom: '2px solid #2b3550', fontSize: 24,
       }, [
         element('span', { color: '#f4b829' }, 'tgrecojs.com'),
-        element('span', { color: '#adb7ca', fontSize: 20 }, date),
+        element('span', { color: '#adb7ca', fontSize: 20 }, date ?? ''),
       ]),
       element('div', {
-        display: 'flex', flexGrow: 1, minHeight: 0, alignItems: 'center', padding: '24px 0',
+        display: 'flex', flexDirection: 'column', justifyContent: 'center', flexGrow: 1, minHeight: 0, padding: '24px 0',
       }, [
         element('h1', {
           width: '100%', margin: 0, fontFamily: 'IBM Plex Serif', fontWeight: 600,
-          fontSize: title.length > 110 ? 48 : title.length > 65 ? 60 : 72,
-          lineHeight: 1.12, letterSpacing: '-1px', lineClamp: 4,
+          fontSize: titleSize, lineHeight: 1.12, letterSpacing: '-1px', lineClamp: description ? 3 : 4,
           // Even line lengths, so a break never strands a short tail like "- Union Types".
           textWrap: 'balance', overflow: 'hidden', overflowWrap: 'anywhere',
         }, title),
+        ...(description
+          ? [element('p', {
+              width: '100%', maxWidth: 980, margin: '22px 0 0', fontFamily: 'IBM Plex Sans',
+              fontSize: 28, lineHeight: 1.4, color: '#adb7ca', lineClamp: 3, overflow: 'hidden', textWrap: 'pretty',
+            }, description)]
+          : []),
       ]),
       element('div', {
         display: 'flex', alignItems: 'center', gap: 16,
@@ -89,8 +103,13 @@ export const renderPostImage = async ({ title, pubDate }: PostImage) => {
       fonts: [
         { name: 'IBM Plex Serif', data: serif, weight: 600, style: 'normal' },
         { name: 'IBM Plex Mono', data: mono, weight: 400, style: 'normal' },
+        { name: 'IBM Plex Sans', data: sans, weight: 400, style: 'normal' },
       ],
     },
   );
   return sharp(Buffer.from(svg)).png().toBuffer();
 };
+
+/** A post's card: title, description and date from its frontmatter. */
+export const renderPostImage = (post: { title: string; description: string; pubDate: Date }) =>
+  renderCard(post);

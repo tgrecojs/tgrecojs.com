@@ -1,13 +1,9 @@
 ---
 import Base from '../layouts/Base.astro';
-import { getCollection } from 'astro:content';
+import { dotClass, formatDate as fmt, getPosts, minutesRead } from '../lib/posts';
 
 // Drafts show in `astro dev`, never in the build.
-const posts = (await getCollection('posts', ({ data }) => import.meta.env.DEV || !data.draft)).sort(
-  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
-);
-
-const fmt = (d: Date) => d.toLocaleDateString('en-GB', { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' });
+const posts = await getPosts();
 
 // The plate on the home page links to the telescope post once it is published.
 const telescope = posts.find((p) => p.id === 'telescope');
@@ -39,15 +35,14 @@ const telescope = posts.find((p) => p.id === 'telescope');
 
   <ul class="posts">
     {
-      posts.map((post) => {
+      posts.map((post, i) => {
         return (
           <li class="post">
-            <i class="dot dot-here" aria-hidden="true" />
+            <i class={`dot ${dotClass(i)}`} aria-hidden="true" />
             <div>
               <div class="meta mono">
                 <time datetime={post.data.pubDate.toISOString()}>{fmt(post.data.pubDate)}</time>
-                <span class="src">tgrecojs.com</span>
-                {post.data.minutesRead ? <span>{post.data.minutesRead} min</span> : null}
+                <span>{minutesRead(post)} min</span>
                 {post.data.draft && <span class="draft">draft</span>}
               </div>
               <h2>
@@ -86,7 +81,6 @@ const telescope = posts.find((p) => p.id === 'telescope');
   .post { display: grid; grid-template-columns: 14px 1fr; gap: 0 1rem; align-items: start; }
   .post > .dot { margin-top: .55rem; }
   .meta { display: flex; gap: .9rem; flex-wrap: wrap; }
-  .meta .src { color: var(--ink-2); }
   .meta .draft { color: var(--draft); }
   .post h2 { font-family: var(--f-display); font-optical-sizing: auto; font-weight: 600; font-size: 1.45rem; line-height: 1.2; letter-spacing: -.01em; margin: .25rem 0 .4rem; text-wrap: balance; }
   .post h2 a { color: var(--ink); text-decoration: none; background-image: linear-gradient(var(--accent), var(--accent)); background-size: 0 2px; background-repeat: no-repeat; background-position: 0 100%; transition: background-size .18s cubic-bezier(.2, 0, 0, 1); }

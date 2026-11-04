@@ -1,0 +1,107 @@
+---
+// Share controls for the end of a post. "Copy link" always works; "Share…" appears only
+// where the browser has a share sheet (navigator.share), so nothing is promised that a
+// click cannot deliver. The sheet already lists the reader's own networks, so there are
+// no per-network composer links to clutter the row.
+interface Props {
+  title: string;
+  url: string;
+}
+const { title, url } = Astro.props;
+---
+
+<div class="share" data-share data-title={title} data-url={url}>
+  <button type="button" class="share-btn" data-share-native hidden>Share…</button>
+  <button type="button" class="share-btn share-copy" data-share-copy>
+    <span class="label label-idle">Copy link</span>
+    <span class="label label-done" aria-hidden="true">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M3 8.5 6.5 12 13 4.5" /></svg>
+      Copied
+    </span>
+  </button>
+  <span class="sr-only" role="status" aria-live="polite" data-share-status></span>
+</div>
+
+<style>
+  .share { display: flex; align-items: center; gap: .5rem .6rem; flex-wrap: wrap; }
+  /* Same pill as the sandbox buttons: mono label, ink border, 44px tall. */
+  .share-btn {
+    display: inline-grid; place-items: center;
+    min-height: var(--control-h); padding: 0 1rem;
+    font: 500 .8125rem/1 var(--f-mono); color: var(--ink);
+    background: var(--paper); border: var(--control-border); border-radius: 999px;
+    cursor: pointer; touch-action: manipulation;
+    transition: background-color 150ms ease-out, transform 100ms ease-out;
+  }
+  .share-btn:hover { background: var(--paper-2); }
+  .share-btn:active { transform: scale(.96); }
+  /* Both labels share one grid cell, so the button is as wide as the wider label and the
+     swap to "Copied" moves nothing. */
+  .share-copy .label { grid-area: 1 / 1; display: inline-flex; align-items: center; gap: .4em; }
+  .share-copy .label-done { visibility: hidden; }
+  .share-copy[data-copied] .label-idle { visibility: hidden; }
+  .share-copy[data-copied] .label-done { visibility: visible; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  @media (prefers-reduced-motion: reduce) { .share-btn { transition: none; } }
+</style>
+
+<script>
+  for (const root of document.querySelectorAll<HTMLElement>('[data-share]')) {
+    const title = root.dataset.title ?? document.title;
+    const url = root.dataset.url ?? location.href;
+    const native = root.querySelector<HTMLButtonElement>('[data-share-native]');
+    const copy = root.querySelector<HTMLButtonElement>('[data-share-copy]');
+    const status = root.querySelector<HTMLElement>('[data-share-status]');
+
+    if (native && typeof navigator.share === 'function' && (!navigator.canShare || navigator.canShare({ url }))) {
+      native.hidden = false;
+      native.addEventListener('click', async () => {
+        try {
+          await navigator.share({ title, url });
+        } catch {
+          // The reader closed the sheet; nothing to report.
+        }
+      });
+    }
+
+    // The async clipboard API needs a focused, secure document; the hidden-textarea
+    // copy still works in the odd contexts where it does not (an iframe, plain http).
+    const writeClipboard = async (text: string) => {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        const area = document.createElement('textarea');
+        area.value = text;
+        area.setAttribute('readonly', '');
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
+        document.body.append(area);
+        area.select();
+        let ok = false;
+        try {
+          ok = document.execCommand('copy');
+        } catch {
+          ok = false;
+        }
+        area.remove();
+        return ok;
+      }
+    };
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    copy?.addEventListener('click', async () => {
+      if (!(await writeClipboard(url))) {
+        if (status) status.textContent = 'Copying failed. The address bar has the link.';
+        return;
+      }
+      copy.dataset.copied = 'true';
+      if (status) status.textContent = 'Link copied';
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        delete copy.dataset.copied;
+        if (status) status.textContent = '';
+      }, 1500);
+    });
+  }
+</script>

@@ -1,0 +1,98 @@
+---
+// The webring badge in the footer. Renders nothing until src/site.ts has the ring's URL,
+// so the placeholder config can ship without showing an empty control.
+//
+// The glyph is the ring itself, drawn the way the telescope plate is drawn: an orbit seen
+// at an angle, dashed where it passes behind. The filled node at the front is this site,
+// the two mustard nodes are its neighbours, and the hollow nodes are the rest of the ring.
+// Hovering a link lights up the node it leads to; the markup stays a plain nav of links.
+import { site } from '../site';
+const ring = site.webring;
+const parts = ring.name.split(' & ');
+---
+
+{ring.url && (
+  <nav class="webring" aria-label={`${ring.name} webring`}>
+    <svg class="orbit" viewBox="0 0 48 48" width="52" height="52" aria-hidden="true" focusable="false">
+      <path class="orbit-back" d="M4 24A20 9 0 0 1 44 24" />
+      <circle class="node node-far" cx="24" cy="15" r="1.75" />
+      <circle class="node node-far" cx="6.68" cy="19.5" r="1.75" />
+      <circle class="node node-far" cx="41.32" cy="19.5" r="1.75" />
+      <path class="orbit-front" d="M4 24A20 9 0 0 0 44 24" />
+      <circle class="node node-prev" cx="6.68" cy="28.5" r="2.75" />
+      <circle class="node node-next" cx="41.32" cy="28.5" r="2.75" />
+      <circle class="node node-here" cx="24" cy="33" r="3.5" />
+    </svg>
+
+    <a class="webring-name" href={ring.url}>
+      <span class="webring-name__text">
+        {parts.map((part, i) => (
+          <>
+            {i > 0 && <em class="amp">&amp;</em>}
+            {part}
+          </>
+        ))}
+      </span>
+    </a>
+
+    <p class="webring-steps">
+      {ring.prev && <a class="step step-prev" href={ring.prev}><span aria-hidden="true">←</span>{' '}Previous</a>}
+      {ring.random && <a class="step step-random" href={ring.random}>Random</a>}
+      {ring.next && <a class="step step-next" href={ring.next}>Next{' '}<span aria-hidden="true">→</span></a>}
+    </p>
+
+    <p class="webring-what mono">a webring · small sites, real people, no newsletters</p>
+  </nav>
+)}
+
+<style>
+  /* Name and steps share the first grid row, so they sit level; the tagline runs under
+     both on the second row, and the glyph spans the two. */
+  .webring {
+    display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; grid-template-rows: auto auto;
+    column-gap: 1rem; align-items: center;
+    padding: .5rem 0 .75rem; margin-bottom: .5rem;
+  }
+  .webring p { margin: 0; }
+
+  /* The glyph is decorative: it never takes a click or a selection. */
+  .orbit { grid-column: 1; grid-row: 1 / span 2; width: 52px; height: 52px; pointer-events: none; user-select: none; overflow: visible; }
+  .orbit path { fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-linecap: round; }
+  .orbit-back { stroke-dasharray: 2 2.75; transition: stroke-dashoffset 300ms ease-out; }
+  .node { stroke: var(--ink); stroke-width: 1.25; transform-box: fill-box; transform-origin: center; transition: transform 150ms ease-out, fill 150ms ease-out; }
+  .node-far { fill: var(--paper); }
+  .node-prev, .node-next { fill: var(--mustard); }
+  .node-here { fill: var(--cobalt); }
+
+  .webring-name {
+    grid-column: 2; grid-row: 1; justify-self: start;
+    font: 600 1.05rem/1.25 var(--f-display); font-optical-sizing: auto; letter-spacing: -.01em;
+    color: var(--ink); text-decoration: none;
+  }
+  .webring-name__text {
+    background-image: linear-gradient(var(--accent), var(--accent)); background-size: 0 2px;
+    background-repeat: no-repeat; background-position: 0 100%;
+    transition: background-size .18s cubic-bezier(.2, 0, 0, 1);
+  }
+  .webring-name:hover .webring-name__text { background-size: 100% 2px; }
+  .amp { font-style: italic; font-weight: 500; color: var(--ink-2); margin-inline: .22em; }
+
+  .webring-steps { grid-column: 3; grid-row: 1; display: flex; gap: 0 1.1rem; }
+  .step { text-decoration: none; white-space: nowrap; }
+  .webring-what { grid-column: 2 / span 2; grid-row: 2; margin-top: -.4rem; }
+
+  /* Each link lights the node it leads to. */
+  .webring:has(.step-prev:is(:hover, :focus-visible)) .node-prev,
+  .webring:has(.step-next:is(:hover, :focus-visible)) .node-next { transform: scale(1.4); }
+  .webring:has(.step-random:is(:hover, :focus-visible)) .node-far { fill: var(--mustard); }
+  .webring:has(.webring-name:is(:hover, :focus-visible)) .orbit-back { stroke-dashoffset: -9.5; }
+
+  @media (max-width: 600px) {
+    .webring { grid-template-columns: 52px minmax(0, 1fr); column-gap: .85rem; }
+    .webring-what { grid-column: 2; }
+    .webring-steps { grid-column: 2; grid-row: 3; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .orbit-back, .node, .webring-name__text { transition: none; }
+  }
+</style>

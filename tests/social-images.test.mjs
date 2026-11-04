@@ -33,7 +33,18 @@ test('every published article advertises a decodable large social image', async 
     assert.equal(image.height, 630);
     assert.ok(bytes.length < 1_000_000, `${slug}: image should stay below 1 MB`);
   }
-  const images = await readdir(new URL('og/', dist));
+  const images = (await readdir(new URL('og/', dist))).filter((f) => f !== 'home.png');
   assert.equal(images.length, links.length, 'only published posts get images');
   assert.ok(!images.includes('ts-sandbox-fixture.png'), 'draft fixture stays private');
+});
+
+// Pages that are not posts share one site card, so a shared home page link gets an image too.
+test('the home page advertises the site card', async () => {
+  const html = await readFile(new URL('index.html', dist), 'utf8');
+  assert.equal(meta(html, 'og:image'), 'https://tgrecojs.com/og/home.png');
+  assert.equal(meta(html, 'twitter:card'), 'summary_large_image');
+  assert.ok(meta(html, 'og:description'), 'home page description');
+  const image = await sharp(await readFile(new URL('og/home.png', dist))).metadata();
+  assert.equal(image.width, 1200);
+  assert.equal(image.height, 630);
 });

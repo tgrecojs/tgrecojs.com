@@ -45,6 +45,22 @@ To embed a Colorfigures figure, drop its self-contained HTML in `public/figures/
 `figure: /figures/name.html` to the frontmatter. It renders above the post body in an
 iframe, with a link to open it full screen.
 
+## Site config, post footer and social cards
+
+`src/site.ts` holds the facts more than one template needs: the author line, the footer
+links, and the webring. The webring
+badge in the footer (`src/components/Webring.astro`) draws the ring as an orbit and links
+to webri.ng's previous, random and next endpoints; it renders nothing while `webring.url`
+is empty.
+
+Every post ends with `src/components/PostFooter.astro`: the author line with the share
+controls (copy link, and the system share sheet where the browser has one), the previous
+and next post by date, and up to three related posts (same series first, then shared tags,
+never repeating the neighbours). `src/lib/posts.ts` has the list helpers:
+published posts newest first, reading time from the body when `minutesRead` is not set,
+neighbours, related posts, and the alternating dot colour (cobalt on even slots, mustard
+on odd).
+
 ## Mirroring Hindley Milner posts
 
 ```bash
@@ -69,7 +85,10 @@ you want old caches dropped on the next deploy.
 ## Social cards
 
 Every published post gets a 1200×630 card at `/og/<post-id>.png`, rendered at build time
-by `src/lib/post-image.ts` with Satori and sharp. `npm test` builds the site and checks
+by `src/lib/post-image.ts` with Satori and sharp. The card carries the title, the
+description and the date, because X and LinkedIn no longer show `og:description` next to
+a link and the image is the one thing every network still displays. Pages that are not
+posts share the site card at `/og/home.png`. `npm test` builds the site and checks
 each card and its meta tags. Emoji in titles are drawn with
 [Twemoji](https://github.com/jdecked/twemoji) graphics, licensed CC-BY 4.0.
 
