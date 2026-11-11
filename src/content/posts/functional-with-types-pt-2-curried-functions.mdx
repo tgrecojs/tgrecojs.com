@@ -2,12 +2,17 @@
 title: "Functional with Types Pt. 2 - Curried Functions"
 description: "Carry input and output types across curried calls with a reusable mapValues function."
 pubDate: 2026-11-02
-tags: ["typescript","generics","functional-programming"]
+tags: ["typescript", "generics", "functional-programming"]
 draft: true
 source: here
 series: "Functional, with types"
 seriesOrder: 2
 ---
+
+import TsSandbox from "../../components/ts-sandbox/TsSandbox.astro";
+import uncurriedMapValues from "../../sandbox/typed-fp/pt2-currying/uncurried-mapValues.ts?raw";
+import curriedMapValues2 from "../../sandbox/typed-fp/pt2-currying/curried-mapValues-2.ts?raw";
+import curriedMapValues from "../../sandbox/typed-fp/pt2-currying/curried-mapValues.ts?raw";
 
 > Working outline. Keep the getLengths and multiplyBy10 experiments from your Logseq notes as the central example.
 
@@ -15,15 +20,51 @@ seriesOrder: 2
 
 How do we preserve types when we choose a transformation now and provide its data later?
 
-## Begin with an ordinary map helper
+## tightly coupled params
 
-Show the two-argument version first so the reader understands which arguments exist. Then turn mapValues(transform, values) into mapValues(transform)(values). Call this currying. Explain point-free definitions separately: they omit an explicit data parameter when assembling a function.
+The code block below shows the `mapValues` function which takes in a `transform` as well as a `values` array. We see the generic `<A, B>` being used to express the relationship between the `transform` function and the `values` it operates on.
+
+The type annotations tell us that:
+
+- the `transform` function operates on items of type `A` and produces items of type `B`.
+- `values` is a `readonly` array of `A`s.
+- the return value of our function is an array of `B`s.
+
+<TsSandbox
+  id="uncurried-map-values"
+  title="Uncurried mapValues"
+  code={uncurriedMapValues}
+/>
+
+While this is no doubt useful, we can level up `mapValues` by transforming it into a curried function. The relationship between the arguments and the generic tell the story. We can preserve this exact structure even if we transform it from its current version, in which it takes both arguments at once, into it's _curried_ verion.
+
+> a curried function is a function that returns a function with an arity of one.
+
+To simplify that a bit: arity is the term for describing the number of arguments a function will receive. The `mapValues` function we just looked at has an arity of 2. It needs both arguments in order to function. Every invocation of it has to align with the `<A, B>` template its input is annotated with. If we promote this to a curried function however, we find ourselves in a much better position for promoting code reusability throughout our systems.
+
+## Abstracting shared logic
+
+A key part of functional programming is code sharing. You can define a function once, and apply it throughout your codebase as needed. Let's transform `mapValues` to promote this concept of "shareability"
+
+<TsSandbox
+  id="curried-map-values"
+  title="Curried mapValues"
+  code={curriedMapValues}
+/>
+
+And just like that, we've preserved the type relationship while creating a much more generic version of the function. The `getLengths` function acts as a demonstration for currying. We could easily extend our usecases.
+
+<TsSandbox id="curried-map-values" code={curriedMapValues2} />
+
+It's worth mentioning that this style of programming is known as **point-free** programming. We
 
 ## Name the relationship between the two calls
 
 ```ts
-const mapValues = <A, B>(transform: (value: A) => B) =>
-  (values: readonly A[]): B[] => values.map(transform);
+const mapValues =
+  <A, B>(transform: (value: A) => B) =>
+  (values: readonly A[]): B[] =>
+    values.map(transform);
 
 const getLengths = mapValues((value: string) => value.length);
 const multiplyBy10 = mapValues((value: number) => value * 10);
@@ -44,4 +85,3 @@ The first call fixes behavior; the second uses it. This same shape will later su
 We can reuse each transformation independently. Next, connect several transformations while preserving the types between them.
 
 Writing source: Logseq / Functional TypeScript Lab / Carrying types through point-free functions. Practice: lab 2. Reference: [Generic functions](https://www.typescriptlang.org/docs/handbook/2/functions.html#generic-functions).
-
