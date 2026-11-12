@@ -2,28 +2,29 @@
 title: "Generics in TypeScript"
 description: "Use generic type parameters to preserve relationships between inputs and outputs without giving up inference."
 pubDate: 2026-11-02
-tags: ["typescript","generics","functional-programming"]
+tags: ["typescript", "generics", "functional-programming"]
 draft: false
-source: here
+series: "Functional Programming, with Types"
+seriesOrder: 1
 ---
 
-import TsSandbox from '../../components/ts-sandbox/TsSandbox.astro';
-import identityUnknown from '../../sandbox/generics-identity-unknown.ts?raw';
-import identityAny from '../../sandbox/generics-identity-any.ts?raw';
-import identityGeneric from '../../sandbox/generics-identity.ts?raw';
-import firstItem from '../../sandbox/generics-first-item.ts?raw';
+import TsSandbox from "../../components/ts-sandbox/TsSandbox.astro";
+import identityUnknown from "../../sandbox/generics-identity-unknown.ts?raw";
+import identityAny from "../../sandbox/generics-identity-any.ts?raw";
+import identityGeneric from "../../sandbox/generics-identity.ts?raw";
+import firstItem from "../../sandbox/generics-first-item.ts?raw";
 
 How can we type a function so that it accepts different types without forgetting which type a particular call receives?
 
-The answer is *generics*. Generics let us describe a relationship between types, allowing functions to process inputs and produce outputs of varying shapes while preserving the information that connects them.
+The answer is _generics_. Generics let us describe a relationship between types, allowing functions to process inputs and produce outputs of varying shapes while preserving the information that connects them.
 
 ## Our first generic
 
-{ /* PFU: Update `identity` to point to fp 101 posts introducing it */}
+{/* PFU: Update `identity` to point to fp 101 posts introducing it */}
 The starting point for us will be to describe the `identity` function:
 
 ```js
-const identity = value => value;
+const identity = (value) => value;
 ```
 
 TypeScript gives us a few options for typing this. We can use `unknown`, `any`, or a generic type parameter. The runtime behavior of `identity` stays the same, but the information TypeScript has about its result changes.
@@ -32,7 +33,11 @@ TypeScript gives us a few options for typing this. We can use `unknown`, `any`, 
 
 We can accept an `unknown` value and return it. At runtime, passing in a string still gives us that string back. But the return type tells TypeScript only that the result is `unknown`.
 
-<TsSandbox id="generics-identity-unknown" title="Identity returning unknown" code={identityUnknown} />
+<TsSandbox
+  id="generics-identity-unknown"
+  title="Identity returning unknown"
+  code={identityUnknown}
+/>
 
 The last line intentionally produces a type error: the compiler won't allow us to call `.toUpperCase()` on a value whose type is `unknown`. We could check whether the result is a `string`, but the caller already supplied a `string`. We have lost that relationship in the signature.
 
@@ -40,7 +45,11 @@ The last line intentionally produces a type error: the compiler won't allow us t
 
 Using `any` makes the error disappear, but it also allows an operation that does not make sense for the supplied value:
 
-<TsSandbox id="generics-identity-any" title="Identity returning any" code={identityAny} />
+<TsSandbox
+  id="generics-identity-any"
+  title="Identity returning any"
+  code={identityAny}
+/>
 
 This code type-checks, but once it's executed, the call to `.toFixed(2)` fails because the string `"thomas"` does not have that number method. `any` has removed the check that would have caught the mistake.
 
@@ -60,7 +69,11 @@ The above code block expresses the following:
 
 For `identity`, we want the result to preserve the input's type. Using `T` for both the parameter and return type describes that relationship. TypeScript can infer `T` from the argument, so we usually don't need to specify it ourselves.
 
-<TsSandbox id="generics-identity" title="Identity preserving its input type" code={identityGeneric} />
+<TsSandbox
+  id="generics-identity"
+  title="Identity preserving its input type"
+  code={identityGeneric}
+/>
 
 TypeScript now knows that `result` has the methods available on a `string`, and `year` has the methods available on a `number`. Now we're finally getting somewhere!
 
@@ -72,7 +85,11 @@ Typing `identity` makes the relationship between an input and its output easy to
 
 The `first` function selects the first item from an array. In its signature, `T` describes the array's element type. The input is `readonly T[]`, and the result is `T | undefined` because the array might be empty.
 
-<TsSandbox id="generics-first-item" title="Get the first item without losing its type" code={firstItem} />
+<TsSandbox
+  id="generics-first-item"
+  title="Get the first item without losing its type"
+  code={firstItem}
+/>
 
 When we pass in an array of strings, the result is a `string` or `undefined`. When we pass in an array of post objects, the result retains the `title` and `draft` fields, or it is `undefined`.
 
@@ -86,4 +103,4 @@ And thus concludes our exploration of generics in TypeScript. To recap, we learn
 
 Small, reusable functions that keep their types intact are what functional programming is built from, and with generics in hand, we've taken our first steps toward strongly typed functional programming in TypeScript!
 
-{/* PFU: Adding tags at the bottom here, or "related" posts section that links to related posts. I don't want to force the reader to follow along or use the gimmicky "stay tuned for post 2". I want posts to complement eachother, but also be a standalone source of useful information*/}
+{/* PFU: Adding tags at the bottom here, or "related" posts section that links to related posts. I don't want to force the reader to follow along or use the gimmicky "stay tuned for post 2". I want posts to complement eachother, but also be a standalone source of useful information */}

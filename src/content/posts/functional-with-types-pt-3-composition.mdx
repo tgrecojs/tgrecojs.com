@@ -5,7 +5,7 @@ pubDate: 2026-11-02
 tags: ["typescript","composition","functional-programming"]
 draft: true
 source: here
-series: "Functional, with types"
+series: "Functional Programming, with Types"
 seriesOrder: 3
 ---
 
@@ -34,6 +34,26 @@ const compose2 = <A, B, C>(
 ```
 
 Explain A to B to C. Start with concrete transformations and verify both helpers. Then test pipe2(singleton, box) separately: its generic relationship survives this higher-order signature. The runtime-equivalent compose2(box, singleton) is a separate inference experiment, not an automatic guarantee. With the signature above, the generic compose call fails inference in TypeScript 5.9.3; use concrete callback types or explicit type arguments to demonstrate its runtime order before exploring that limitation. Reversing singleton and box changes the intended value shape, and each example must call its own returned function.
+
+## Name the data, or leave it out
+
+Introduce point-free style once `pipe2` works. This section is moved from the curried functions draft. Define `trim` and `toLowerCase` as one-argument string functions first, and link to the curried functions post once it is published.
+
+```ts
+// names the data
+const normalizeExplicit = (value: string) => toLowerCase(trim(value));
+
+// point-free: never names it
+const normalizePointFree = pipe2(trim, toLowerCase);
+```
+
+Point-free functions are functions that are "free" of the points (data) they operate on. They don't need the data at the time of creation. It's like a team of functions. They're ready to operate at the moment they get called into the game.
+
+`normalizePointFree` is point-free with respect to the string: it does not explicitly name or forward that parameter. It still accepts a string when called. The inner callbacks name their own `value`, so the point-free description applies to the outer definition, not every function inside it.
+
+These ideas describe different parts of the example. `pipe2` is curried-style: it takes its functions first and returns a function that waits for the value. Supplying only the functions is partial application. Defining `normalizePointFree` without an explicit string parameter is point-free style.
+
+Confirm TypeScript still infers `(value: string) => string` for both versions. Tie this to the generic `singleton`/`box` test below: point-free is where generic inference gets fragile, so keep that experiment separate.
 
 ## Add one more transformation
 

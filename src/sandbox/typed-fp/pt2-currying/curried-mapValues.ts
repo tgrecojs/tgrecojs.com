@@ -5,6 +5,7 @@ const mapValues =
   (values: readonly A[]): B[] =>
     values.map(transform);
 
+// remove `: string` below and TypeScript can no longer tell what type `value` is
 const getLengths = mapValues((value: string) => value.length);
 
 console.log({ lengths: getLengths(array) });
