@@ -8,3 +8,7 @@ const text = "How to build a TypeScript validator for every input in your applic
 
 console.log({ title: fitsTitle(text), summary: fitsSummary(text) });
 // { title: false, summary: true }
+
+const summary = "x".repeat(200);
+console.log({ longSummary: fitsSummary(summary) });
+// false. Change 160 to 240 above and run again

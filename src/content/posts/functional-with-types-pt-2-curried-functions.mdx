@@ -1,9 +1,9 @@
 ---
 title: "Curried Functions in TypeScript"
-description: "Carry input and output types across curried calls with a reusable mapValues function."
+description: “Use currying to create reusable functions while keeping TypeScript types intact.”
 pubDate: 2026-11-02
 tags: ["typescript", "generics", "functional-programming"]
-draft: true
+draft: false
 source: here
 series: "Functional Programming, with Types"
 seriesOrder: 2
@@ -19,24 +19,9 @@ Currying plays an important role in the functional programmer's toolkit. In this
 
 ## Everything everywhere all at once
 
-In [Generics in TypeScript](/posts/functional-with-types-pt-1-generics), I discussed how to use a type parameter to establish a relationship between a function's input and its output. In this post, we'll see how to establish the same relationship on generalized functions that haven't recieved the data they're operating on. Before getting into that though, let's take a look at our starting point - `mapValues` which is essentially a wrapper for JavaScript's `Array.prototype.map` method.
+In [Generics in TypeScript](/posts/functional-with-types-pt-1-generics), I discussed how to use a type parameter to establish a relationship between a function's input and its output. In this post, we'll see how to establish the same relationship on generalized functions that haven't received the data they're operating on.
 
-```typescript
-const mapValues = <A, B>(
-  transform: (value: A) => B,
-  values: readonly A[],
-): B[] => values.map(transform);
-```
-
-~~In [Generics in TypeScript](/posts/functional-with-types-pt-1-generics), I discussed how to use a type parameter to establish a relationship between a function's input and its output. In this post, we'll see how to establish the same relationship on generalized functions that haven't recieved the data they're operating on.~~
-
-If we disect the type annotations we see that:
-
-- `transform` is a function thats operates on elements of type `A` and produces elements of type `B`.
-- `values` is a `readonly` array of `A`s.
-- the return value of our function is an array of `B`s.
-
-With this in mind, it's quite easy to infer that running this code results in an array of type `number[]` being logged to the console.
+Before getting into that though, let's take a look at our starting point - `mapValues` which is essentially a wrapper for JavaScript's [`Array.prototype.map()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) method. Running it logs an object whose `lengths` property is a `number[]`:
 
 <TsSandbox
   id="uncurried-map-values"
@@ -44,20 +29,26 @@ With this in mind, it's quite easy to infer that running this code results in an
   code={uncurriedMapValues}
 />
 
-While it can be beneficial to wrap APIs like `.map` inside of our own functions, we can _really_ level up this code by transforming `mapValues` into its curried version.
+If we dissect the type annotations, we see that:
+
+- `transform` is a function that operates on elements of type `A` and produces elements of type `B`.
+- `values` is a `readonly` array of `A`s.
+- the return value of our function is an array of `B`s.
+
+While it can be beneficial to wrap APIs like `.map()` inside of our own functions, we can _really_ level up this code by transforming `mapValues` into its curried version.
 
 > Currying turns a function that accepts multiple parameters into a sequence of functions that have an arity of one.
 
 To simplify that a bit: **arity** is the term for **describing the number of arguments a function will receive**. Rather than trying to memorize a definition though, let's look at curried and uncurried versions side by side.
 
-`_multiply` takes it's arguments indepdently, whereas `multiply` takes both at call time.
+`multiply_` (the trailing underscore marks the curried version) takes its arguments independently, whereas `multiply` takes both at call time.
 
 ```ts
 const multiply = (x: number, y: number) => x * y;
 const multiply_ = (x: number) => (y: number) => x * y;
 ```
 
-It's through transforming `multiply` to its curried version that can fix a value as the first argument, which we can call create throughout our code to double or square numbers. Note: the act of fixing an argument onto a funtion is known as **partial application**.
+By transforming `multiply` to its curried version, we can fix a value as the first argument, then reuse the result throughout our code to double or triple numbers. Note: the act of fixing an argument onto a function is known as **partial application**.
 
 ```ts
 const double = multiply_(2);
@@ -71,7 +62,7 @@ In essence, currying allows us to abstract away shared logic and promote code re
 
 ## Abstracting shared logic
 
-Abstraction is the process of decoupling code from the context in which it operates. It's through abstraction that we can begin to make core more portable. It's a key part of functional programming, as enables developers to share code throughout programs and even across projects. You can define a function once, and apply it throughout your codebase as needed.
+Abstraction is the process of decoupling code from the context in which it operates. It's through abstraction that we can begin to make code more portable. It's a key part of functional programming, as it enables developers to share code throughout programs and even across projects.
 
 On that note, let's revisit `mapValues`. It has an arity of 2, so it needs both of these arguments in order to execute:
 
@@ -80,7 +71,7 @@ On that note, let's revisit `mapValues`. It has an arity of 2, so it needs both 
 
 If we split these into separate calls, it doesn't change the `<A, B>` relationship we described earlier. `transform` still fixes `A` and `B`, and `values` still has to be an array of `A`s. The only difference is when each one arrives.
 
-Taking the data last is really powerful, but more on that later. For now, let's split `mapValues` into two calls. To do so, we'll create `getLengths` - a new function for getting the length of a string - by supplying only the `transform` argument:
+Taking the data last is really powerful, but more on that later. For now, we'll create `getLengths` - a new function for getting the length of a string - by supplying only the `transform` argument:
 
 <TsSandbox
   id="curried-map-values"
@@ -88,14 +79,13 @@ Taking the data last is really powerful, but more on that later. For now, let's 
   code={curriedMapValues}
 />
 
-And just like that, we've rewritten `mapValues` to be a fountain from which other functions can brought to life. We're in a much better position for promoting code reuse throughout our systems.
+And just like that, we've rewritten `mapValues` to be a fountain from which other functions can be brought to life. We're in a much better position for promoting code reuse throughout our systems.
 
-Equally as important, we've preserving the type relationship! In this version, `getLengths` is a function with the type `(values: readonly string[]) => number[]`.
+Equally important, we've preserved the type relationship! In this version, `getLengths` is a function with the type `(values: readonly string[]) => number[]`.
 
 TypeScript infers `A` and `B` from the transformation in the first call. Here, the callback accepts a `string` and returns a `number`, so the function returned by `mapValues` already knows which arrays it accepts.
 
-{/* Should this paragraph - is it better suited to be placed RIGHT after the code example (on line 90) */}
-Notice the `: string` on the callback we pass to `mapValues`. Remove it and the compiler tells you `'value' is of type 'unknown'`. In the uncurried version we could skip the annotation, because TypeScript could infer `A` from the array. In the curried version, the array hasn't arrived yet, so the annotation is the only way TypeScript knows what `A` is.
+Notice the `: string` on the callback we pass to `mapValues`. Remove it and the compiler tells you `'value' is of type 'unknown'`. In the uncurried version we could skip the annotation, because TypeScript could infer `A` from the array. In the curried version, the array hasn't arrived yet, so an inline callback like this one has nothing to infer `A` from. It needs the annotation, or it needs to be a function that's already typed.
 
 ## Reduce reuse recycle
 
@@ -107,20 +97,20 @@ We created `getLengths` from `mapValues`, but that's just the start of things to
   code={curriedMapValues2}
 />
 
-The code block demonstrates that the input doesn't have to be an array of strings, either. `squareNumbers` takes numbers and returns numbers. `getFactorial` takes numbers and returns objects that retain a given number and computes its factorial. Whatever the transformation, they all come from the same `mapValues`.
+The code block demonstrates that the input doesn't have to be an array of strings, either. `squareNumbers` takes numbers and returns numbers. Whatever the transformation, they all come from the same `mapValues`.
 
 Observing the typings, we see that:
 
 - in `addLabels`, TypeScript infers `A` as `string` and `B` as `{ label: string; value: string }`.
 - in `squareNumbers`, TypeScript infers `number` for both `A` and `B`.
 
-It's really helpful to see this type inference appear on hover, but the true benefit lies within how TypeScript enforces these contracts.
+It's really helpful to see this type inference appear on hover, but the true benefit lies in how TypeScript enforces these contracts.
 
 Uncomment the last line in the code block above to pass `numbers` to `getLengths`. TypeScript rejects it immediately:
 
 ```text
 Argument of type 'number[]' is not assignable to parameter of type 'readonly string[]'.
-  Type 'number' is not assignable to type 'string'
+  Type 'number' is not assignable to type 'string'.
 ```
 
 And rightfully so! The types don't match up.
@@ -137,12 +127,11 @@ Say a post editor allows 60 characters in a title and 160 in a summary. Both fie
 
 `maxLength(60)` returns a `(value: string) => boolean`. The returned function remembers the limit, so we can call `fitsTitle` with new text each time the input changes. The same text can pass one field's check and fail the other's.
 
-We've just got word that the summary text needs to be extended so that 240 characters are allowed. In the uncurried version, this means updating every callsite albiet inside a live component, or within a test file. We've side-stepped this though and made our lives a whole lot easier. We simply need to update `fitsSummary` to take in `240` and we're golden.
+Now, let's pretend we just got word that summaries can be 240 characters. Change `160` to `240` in `fitsSummary` and run it again. The 200-character summary now passes, and no caller had to change, because none of them pass the limit themselves.
+
+{/* PFU: When composition, validation, etc. posts are done, link to them here */}
+Right now `fitsSummary` only answers yes or no. Pair it with a message like "Your summary is too long" and the form has a reusable rule that can explain what failed.
 
 ## Recap
 
-And thus concludes our TypeScript tour. We learned how to write curried functions. We learned that currying and partial application go hand-in-hand. (Remember, each time we've fixed `transform` as the first argument of `mapValues`, we've _partially applied_ that function).
-
-{/* Note: this is somewhat of a strong ending but it's also a bit lousy. how can we update it to somewhat hint at the next post */}
-{/* PFU: When composition, validation, etc. posts are done, link to them here */}
-A boolean answers whether the text fits. If we want the form to explain a failure, we can give the check a message. The function and its message are enough to describe a reusable validation rule.
+And thus concludes our TypeScript tour. We preserve types by putting the generics on the first call: `mapValues` infers `A` and `B` from the `transform` we choose now, so the function it returns already knows which arrays it accepts later. Along the way, we learned that currying and partial application go hand-in-hand. (Remember, each time we've fixed `transform` as the first argument of `mapValues`, we've _partially applied_ that function.)
