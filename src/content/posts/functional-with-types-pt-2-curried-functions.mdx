@@ -1,6 +1,6 @@
 ---
 title: "Curried Functions in TypeScript"
-description: “Use currying to create reusable functions while keeping TypeScript types intact.”
+description: Use currying to create reusable functions while keeping TypeScript types intact.
 pubDate: 2026-11-12
 tags: ["typescript", "generics", "functional-programming"]
 draft: false
@@ -15,9 +15,9 @@ import curriedMapValues2 from "../../sandbox/typed-fp/pt2-currying/curried-mapVa
 import curriedMapValues from "../../sandbox/typed-fp/pt2-currying/curried-mapValues.ts?raw";
 import maxLength from "../../sandbox/typed-fp/pt2-currying/max-length.ts?raw";
 
-Currying plays an important role in the functional programmer's toolkit. In this post, we'll look at what currying is, why it's worth reaching for, and how TypeScript helps us keep our types intact along the way. By the end, we'll answer the question: how do we preserve types when we choose a transformation now and provide its data later?
+Currying plays an important role in the functional programmer's toolkit. In this post, we'll look at what currying is, why it's worth reaching for, and how TypeScript helps us keep our types intact along the way. By the end, we'll answer the question: **how do we preserve types when we choose a transformation now and provide its data later?**
 
-## Everything everywhere all at once
+## Everything Everywhere All at Once
 
 In [Generics in TypeScript](/posts/functional-with-types-pt-1-generics), I discussed how to use a type parameter to establish a relationship between a function's input and its output. In this post, we'll see how to establish the same relationship on generalized functions that haven't received the data they're operating on.
 
