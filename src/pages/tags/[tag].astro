@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { getCollection } from 'astro:content';
-import { dotClass, formatDate as fmt } from '../../lib/posts';
+import PostList from '../../components/PostList.astro';
 
 export async function getStaticPaths() {
   const posts = await getCollection('posts', ({ data }) => import.meta.env.DEV || !data.draft);
@@ -21,30 +21,11 @@ const { posts } = Astro.props;
     <p class="mono"><a href="/tags">All tags</a></p>
     <h1>{tag}</h1>
   </header>
-  <ul class="posts">
-    {
-      posts.map((post, i) => (
-        <li>
-          <div class="meta mono">
-            <i class={`dot ${dotClass(i)}`} aria-hidden="true" />
-            <time datetime={post.data.pubDate.toISOString()}>{fmt(post.data.pubDate)}</time>
-          </div>
-          <h2><a href={`/posts/${post.id}`}>{post.data.title}</a></h2>
-          <p>{post.data.description}</p>
-        </li>
-      ))
-    }
-  </ul>
+  <PostList posts={posts} />
 </Base>
 
 <style>
-  .head { margin-top: 3.5rem; padding-bottom: 1rem; border-bottom: 1.5px solid var(--ink); }
+  .head { margin: 3.5rem 0 1.75rem; padding-bottom: 1rem; border-bottom: 1.5px solid var(--ink); }
   .head p { margin: 0 0 .5rem; }
-  h1 { font-family: var(--f-mono); font-weight: 600; font-size: 1.6rem; margin: 0; }
-  .posts { list-style: none; padding: 0; margin: 1.5rem 0 0; display: grid; gap: 2rem; }
-  .meta { display: flex; gap: .6rem; align-items: center; }
-  .posts h2 { font-family: var(--f-display); font-optical-sizing: auto; font-weight: 600; font-size: 1.45rem; line-height: 1.2; margin: .25rem 0 .3rem; }
-  .posts h2 a { color: var(--ink); text-decoration: none; }
-  .posts h2 a:hover { text-decoration: underline; }
-  .posts p { margin: 0; color: var(--ink-2); max-width: 36rem; }
+  h1 { font-family: var(--f-mono); font-weight: 600; font-size: var(--fs-5); margin: 0; }
 </style>
