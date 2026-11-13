@@ -12,6 +12,8 @@ export const site = {
   // Footer links, in this order. `rel="me"` lets IndieWeb tools verify the profiles
   // belong to this site.
   links: [
+    // A SimpleLogin alias, not a mailbox: if it gets spammed, replace it there and here.
+    { label: 'Email', href: 'mailto:hello@tgrecojs.com' },
     { label: 'RSS', href: '/rss.xml' },
     { label: 'GitHub', href: 'https://github.com/tgrecojs', rel: 'me' },
     { label: 'Twitter', href: 'https://x.com/tgrecojs', rel: 'me' },
