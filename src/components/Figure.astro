@@ -21,8 +21,7 @@ const { src, title, caption, height = 640 } = Astro.props;
 </figure>
 
 <style>
-  /* Full column width even inside .prose, which caps text children at 38rem. */
-  .figure { margin: 2rem 0; max-width: none; }
+  .figure { margin: 2rem 0; }
   iframe { display: block; width: 100%; border: 1.5px solid var(--ink); border-radius: 6px; box-shadow: 3px 3px 0 var(--shadow); background: #f2efe7; }
   /* Colorfigures stack their controls on phones; the telescope needs ~745px there.
      Too short and the figure scrolls inside the frame, which fights the page scroll. */

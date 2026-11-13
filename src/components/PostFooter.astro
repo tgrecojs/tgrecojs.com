@@ -89,7 +89,7 @@ const rest = site.description.startsWith(site.author) ? site.description.slice(s
   .post-nav__label { color: var(--ink-3); }
   .post-nav__title {
     font-family: var(--f-display); font-weight: 600; font-optical-sizing: auto;
-    font-size: 1.1rem; line-height: 1.25; letter-spacing: -.01em; text-wrap: balance;
+    font-size: var(--fs-3); line-height: 1.25; letter-spacing: -.01em; text-wrap: balance;
     background-image: linear-gradient(var(--accent), var(--accent)); background-size: 0 2px;
     background-repeat: no-repeat; background-position: 0 100%; transition: background-size .18s cubic-bezier(.2, 0, 0, 1);
   }
@@ -104,13 +104,13 @@ const rest = site.description.startsWith(site.author) ? site.description.slice(s
 
   /* Related posts are one line each: the dot and the title. Dates and reading times
      live on the home list; here they only add noise. */
-  .eyebrow { font: 600 .72rem/1.4 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 .5rem; }
+  .eyebrow { font: 600 var(--fs-0)/1.4 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 .5rem; }
   .related-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .1rem; }
   .related-list li { display: grid; grid-template-columns: 14px 1fr; gap: 0 1rem; align-items: center; }
   .related-title {
     justify-self: start; display: inline-block; padding-block: .7rem;
     font-family: var(--f-display); font-weight: 600; font-optical-sizing: auto;
-    font-size: 1.1rem; line-height: 1.25; letter-spacing: -.01em; color: var(--ink); text-decoration: none; text-wrap: balance;
+    font-size: var(--fs-3); line-height: 1.25; letter-spacing: -.01em; color: var(--ink); text-decoration: none; text-wrap: balance;
     background-image: linear-gradient(var(--accent), var(--accent)); background-size: 0 2px;
     background-repeat: no-repeat; background-position: 0 100%; transition: background-size .18s cubic-bezier(.2, 0, 0, 1);
   }
