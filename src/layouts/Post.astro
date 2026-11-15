@@ -126,8 +126,50 @@ const jsonLd = {
     .post > :global(.post-end) { grid-row: 4; }
     .post > .contents { display: block; grid-column: 3; grid-row: 2 / span 2; align-self: start; position: sticky; top: 1.5rem; margin-top: 2.5rem; }
     .contents h2 { margin: 0 0 .6rem; letter-spacing: .08em; text-transform: uppercase; }
-    .contents ol { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
-    .contents a { color: var(--ink-2); font-size: var(--fs-1); line-height: 1.35; text-decoration: none; text-wrap: balance; }
+    /* The list hangs off a hairline rail. The marker on the rail is a 1px box that the
+       script below moves and stretches with --y and --h, so only transform animates. */
+    .contents ol { position: relative; list-style: none; margin: 0; padding: 0 0 0 .9rem; border-left: 1px solid var(--rule); }
+    .contents ol::before {
+      content: ''; position: absolute; left: -1.5px; top: 0; width: 2px; height: 1px; background: var(--accent);
+      transform-origin: top; transform: translateY(var(--y, 0px)) scaleY(var(--h, 0));
+      transition: transform .2s cubic-bezier(.2, 0, 0, 1);
+    }
+    .contents a { display: block; padding-block: .3rem; color: var(--ink-2); font-size: var(--fs-1); line-height: 1.35; text-decoration: none; text-wrap: balance; }
     .contents a:hover { color: var(--ink); text-decoration: underline; }
+    /* A hairline stroke reads as bold without changing the text's width, so nothing rewraps. */
+    .contents a[data-active] { color: var(--ink); -webkit-text-stroke: .3px currentColor; }
   }
+  @media (prefers-reduced-motion: reduce) { .contents ol::before { transition: none; } }
 </style>
+
+<script>
+  // Marks the contents links whose sections are on screen, and stretches the rail marker
+  // over them. A section runs from its h2 to the next h2, or to the end of the prose.
+  const list = document.querySelector<HTMLElement>('.contents ol');
+  const prose = document.querySelector('.prose');
+  if (list && prose) {
+    const links = [...list.querySelectorAll('a')];
+    const heads = links.map((a) => document.getElementById(decodeURIComponent(a.hash.slice(1)))!);
+    // A section counts once this much of it shows. 48px is just over the gap above an h2,
+    // so a section whose last visible part is that gap no longer counts.
+    const EDGE = 48;
+    const track = () => {
+      const tops = [...heads.map((h) => h.getBoundingClientRect().top), prose.getBoundingClientRect().bottom];
+      const on = links.filter((_, i) => tops[i] < innerHeight - EDGE && tops[i + 1] > EDGE);
+      links.forEach((a) => {
+        a.toggleAttribute('data-active', on.includes(a));
+        // Only one link may be "current": the section at the top of the screen.
+        if (a === on[0]) a.setAttribute('aria-current', 'location');
+        else a.removeAttribute('aria-current');
+      });
+      const first = on[0];
+      const last = on[on.length - 1];
+      // With nothing on screen the marker keeps its place and closes to nothing.
+      if (first) list.style.setProperty('--y', `${first.offsetTop}px`);
+      list.style.setProperty('--h', first ? `${last.offsetTop + last.offsetHeight - first.offsetTop}` : '0');
+    };
+    addEventListener('scroll', track, { passive: true });
+    addEventListener('resize', track);
+    track();
+  }
+</script>
