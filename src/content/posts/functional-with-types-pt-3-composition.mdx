@@ -13,15 +13,16 @@ seriesOrder: 3
 
 > **Work plan.** One phase at a time, top to bottom. For each section: write it from its note, put its code in a TsSandbox file under `src/sandbox/typed-fp/pt3-composition/`, ask Claude to check the code and claims, then delete the note and tick the box. Final revisions start once every box is ticked.
 >
-> - [ ] **A. Setup** ("The question", "f of g of x"). Rewrite the sentence after the formula: `(f ∘ g)(x) = f(g(x))` is a definition, so it holds for every function; purity is what makes the result the same every time. Finish the "If someone we're to mutate" sentence, replace the leftover fragment under the north star, and fill or cut the `trimSummaryAndValidate` placeholder (it uses `trace` before it's introduced, and validation belongs to the next post).
-> - [ ] **B. Two-function core** ("Start with the runtime order", "Link the three types in the two-function version").
-> - [ ] **C. Point-free and a third function** ("Name the data, or leave it out", "Add one more transformation").
-> - [ ] **D. The payoff** ("Why we can trust the chain").
-> - [ ] **E. Variadic and bridge** ("Extend to variadic composition", "Bridge to the next post").
+> - [x] **A. Setup** ("The question", "f of g of x").
+> - [x] **B. Two-function core** ("Start with the runtime order", "Link the three types in the two-function version").
+> - [x] **C. Point-free and a third function** ("Name the data, or leave it out", "Add one more transformation").
+> - [x] **D. The payoff** ("Why we can trust the chain").
+> - [ ] **E. Variadic and ending** ("Extend to variadic composition", "Leaning on overloads", typed `compose`, the empty pipeline, a playground, and a recap).
+> - [ ] **Final revisions.** Heading pass (the contents list only shows h2s), the final-pass notes, and your rewrites.
 
 ## The question
 
-In the [currying post](/posts/functional-with-types-pt-2-curried-functions), we learned how to decouple transformer logic from the data that it operates on. In this post, i'll build on concepts discussed in that post to bring function composition into the fold. By the end, we'll learn the ins-and-outs of function composition starting from the theory behind it, along the way learning how use of functional composition makes our software mathematically provable, and why that is useful. I'll be threading in TypeScript types throughout the way too to see how we can create incredibly generic functions that are strongly typed.
+In the [currying post](/posts/functional-with-types-pt-2-curried-functions), we learned how to decouple transformer logic from the data that it operates on. In this post, I'll build on concepts discussed in that post to bring function composition into the fold. By the end, we'll learn the ins-and-outs of function composition starting from the theory behind it, along the way learning how use of functional composition lets us reason about our software like an algebra problem, and why that is useful. I'll be threading in TypeScript types throughout the way too to see how we can create incredibly generic functions that are strongly typed.
 
 Our north star for this post is the following `compose` and `pipe` functions.
 
@@ -37,7 +38,7 @@ const pipe =
     fns.reduce((acc, fn) => fn(acc), initialValue);
 ```
 
-get the most out of our functions - applying them as need be. up a whole chain of transformations before the data arrives. Each function passes its result to the next.
+`compose` and `pipe` let us get the most out of our functions. With them, we can set up a whole chain of transformations before the data arrives. Each function passes its result to the next. The only difference between the two is direction: `pipe` runs the functions left to right, and `compose` runs them right to left.
 
 Say we want to check whether a post summary fits within its character limit. We trim the text, count its characters, and compare that count with the limit. If we count first and then try to trim the result, we’re handing a number to a function that expects a string. Can TypeScript catch that when we put the functions together?
 
@@ -78,34 +79,62 @@ const addTen = add(10);
 addTen(10); // 20
 ```
 
-Because pure functions abide by these rules, we can combine them together to create chains of functions. Let's say we have a classic `greeter` function that takes in a string and then appends that value to the string `Hello`.
+Shared state doesn't have to be a number, either. Let's say we have a classic `greeter` function that takes in a string and then appends that value to the string `Hello`.
 
-```
-let greeting = `Hello`
-const greeter = (name) => `$${greeting}, {name}`;
+```ts
+let greeting = `Hello`;
+const greeter = (name: string) => `${greeting}, ${name}`;
 
-greeting = `I really do not care for you,`
-greeter('friend.') // I really do not care for you, friend... not nice
-```
-
-> Outline note: `greeter` is the counterexample for substitution, which pays off in "Why we can trust the chain." Before `greeting` changes, `greeter('friend.')` can be replaced with its result. After it changes, the same call returns something else, so it can't. The template also needs fixing: as written it prints `$Hello, {name}`; it should be `` `${greeting}, ${name}` ``.
-
+greeter("friend."); // Hello, friend.
+greeting = `I really do not care for you`;
+greeter("friend."); // I really do not care for you, friend... not nice
 ```
 
-const trimSummaryAndValidate = compose(
+Same call, same input, two different answers. Before `greeting` changes, we could swap `greeter("friend.")` out for `"Hello, friend."` and nothing about our program would change. After, we can't.
 
-  trace('')
-)
+Being able to make that swap has a name: **referential transparency**.
 
-```
+> An expression is referentially transparent when we can replace it with its value without changing what the program does.
+
+Every call to a pure function is referentially transparent. `greeter` isn't, because its answer depends on when we call it. Hang on to that idea of swapping a call for its result. We'll come back to it once we have a pipeline to try it on.
+
+Because pure functions abide by these rules, we can combine them together to create chains of functions. Every call in the chain can be swapped for its result, so the whole chain can be too. That's the promise of composition. Before we lean on it, though, we need to know which order the functions in a chain actually run in.
 
 ## Start with the runtime order
 
-For pipe(f, g), evaluate g(f(value)). For compose(g, f), evaluate the same expression. Use unequal input/output types so swapping the order produces a visible mistake. State that these helpers build a function; some libraries call this form flow and reserve pipe for a value-first API.
+Let's start with what `pipe` and `compose` actually do when we call them. `pipe(f, g)` hands its input to `f` first, then hands `f`'s result to `g`. In other words, it evaluates `g(f(x))`. `compose(g, f)` evaluates the exact same expression. It just lists the functions in the same order they appear in the math: `g ∘ f`.
 
-Show order with the north star `pipe` and two number functions, `addTen` and `double`: `pipe(addTen, double)(1)` is `22`, and `pipe(double, addTen)(1)` is `12`. Same functions, different order, different answer, and no error, because both are `number => number`. That's why the next section switches to unequal types.
+Neither one runs anything right away, either. Both return a new function that waits for its data, just like a curried function. (Some libraries call this function-building version `flow` and save the name `pipe` for a version that takes the value first, like `pipe(value, f, g)`.)
 
-Add in the following `trace` helper and show how we can trace a value at each step in the pipeline.
+```ts
+const addTen = (x: number) => x + 10;
+const double = (x: number) => x * 2;
+
+pipe(addTen, double)(1); // 22
+pipe(double, addTen)(1); // 12
+compose(double, addTen)(1); // 22
+```
+
+Same two functions, different order, different answer. And here's the catch: TypeScript won't warn us about either one.
+
+When we connect two functions, TypeScript checks one thing: does the type coming out of the first function match the type going into the second? `addTen` and `double` both take a `number` and return a `number`, so no matter which one goes first, a `number` flows into a function that expects a `number`. Both orders fit. TypeScript can tell that our pieces fit together, but it has no way of knowing which order we _meant_.
+
+That's a job for tests. Types catch connections that don't fit, and tests catch connections that fit but are in the wrong order:
+
+```ts
+import assert from "node:assert/strict";
+
+const addTenThenDouble = pipe(addTen, double);
+
+assert.equal(addTenThenDouble(1), 22); // passes
+// swap the functions and it fails: 12 !== 22
+```
+
+Pair our functions with test-driven development, writing that expectation before we write the pipeline, and this is how we verify that our output is correct, not just correctly typed.
+
+So is order just a blind spot for TypeScript? Not entirely. TypeScript can see order whenever the types change from step to step. Later in this post, we'll connect `trim` (`string => string`) and `length` (`string => number`). Putting those in the wrong order hands a number to a function that expects a string, and that one _is_ a compile error. We can push this further by giving a step's output its own type, like a `TrimmedString` that `length` requires, so the compiler rejects any pipeline that skips `trim`. That technique is called branding, and it's beyond what we need here.
+
+Before we go any further, let's add another tool to our belt. The `trace` function gives us a vehicle for inspecting arguments at different points in a function pipeline.
 
 ```ts
 const trace =
@@ -116,11 +145,41 @@ const trace =
   };
 ```
 
-Question - how do we type this?
+`trace` takes a label, then returns a function that logs whatever value it receives and hands that value right back, untouched. Since it returns its input, we can drop it anywhere in a pipeline without changing the result:
 
-Answer to explain: `T` goes on the inner function, because the label tells TypeScript nothing about the value. With `T` on the outer function, `const logTrimmed = trace("trimmed")` becomes `(value: unknown) => unknown`, and every type after it in the pipeline becomes `unknown` (checked in TypeScript 5.9.3). This is the currying post's lesson in reverse: there, `transform` carried the types, so the generics went on the first call.
+```ts
+const addTenThenDouble = pipe(addTen, trace("after addTen"), double);
+
+addTenThenDouble(1);
+// after addTen :: 11
+// 22
+```
+
+(Yes, `console.log` is a side effect. We'll come back to why `trace` gets a pass.)
+
+Notice where the type parameter lives. `T` sits on the inner function, not on `trace` itself, and that's on purpose. When we call `trace("after addTen")`, the label is just a string. It tells TypeScript nothing about the value that will eventually flow through. If we put `T` on the outer function instead, TypeScript has to pick `T` right then, with nothing to go on, so it settles on `unknown`:
+
+```ts
+const traceOuter =
+  <T>(label: string) =>
+  (value: T): T => {
+    console.log(label, "::", value);
+    return value;
+  };
+
+const logTrimmed = traceOuter("trimmed"); // (value: unknown) => unknown
+const logTrimmedInner = trace("trimmed"); // <T>(value: T) => T
+```
+
+> Final-pass note: decide whether to keep the `traceOuter` example.
+
+Whatever goes into `logTrimmed`, TypeScript forgets what comes out. With `T` on the inner function, `trace("trimmed")` stays generic until a value actually shows up.
+
+If this sounds familiar, it's the currying post's lesson in reverse. There, `transform` carried the type information, so the generics went on the first call. Here, the label carries none, so the generic waits for the call that receives the data.
 
 ## Link the three types in the two-function version
+
+Now let's write a typed version of `pipe`. We'll start small, with one that takes exactly two functions. Two functions means three types to keep track of: what goes into the first function, what comes out of it and into the second, and what comes out the other end.
 
 ```ts
 const pipe2 =
@@ -134,39 +193,141 @@ const compose2 =
     second(first(value));
 ```
 
-Explain A to B to C with the currying post's summary check. There, `maxLength(160)` counted and compared in one function. Split it into `length` (`string => number`) and `atMost(160)` (`number => boolean`), where `const atMost = (limit: number) => (count: number) => count <= limit`. `pipe2(length, atMost(160))` infers `(value: string) => boolean`: A is `string`, B is `number`, C is `boolean`. `compose2(atMost(160), length)` builds the same function with the arguments reversed.
+`A` is the type going in, `B` is the type in the middle, and `C` is the type coming out. The middle one is the important one. `B` shows up twice in the signature: once as the first function's return type, and once as the second function's parameter type. That shared `B` is the connection. It's how TypeScript checks that the output of one function fits the input of the next.
 
-Then swap them: `pipe2(atMost(160), length)` is rejected. The error lands on `atMost(160)` and says it isn't assignable to `(value: number) => string`, a type TypeScript guessed from `length`. One sentence on this keeps readers from looking for the bug in the wrong place. (The generic `singleton`/`box` experiment moved to the follow-up noted under variadic composition.)
+In the [currying post](/posts/functional-with-types-pt-2-curried-functions), `maxLength(160)` counted a summary's characters and compared the count to the limit, all in one function. Let's split those two jobs apart:
+
+```ts
+const length = (value: string) => value.length;
+const atMost = (limit: number) => (count: number) => count <= limit;
+
+const fitsSummary = pipe2(length, atMost(160));
+// (value: string) => boolean
+
+fitsSummary("x".repeat(160)); // true
+fitsSummary("x".repeat(161)); // false
+```
+
+TypeScript infers `A` as `string`, `B` as `number`, and `C` as `boolean`, so `fitsSummary` is a `(value: string) => boolean`. `compose2(atMost(160), length)` builds the exact same function, with the arguments listed in the opposite order.
+
+Now let's swap them:
+
+```ts
+const broken = pipe2(atMost(160), length);
+// Argument of type '(count: number) => boolean' is not assignable
+// to parameter of type '(value: number) => string'.
+```
+
+TypeScript rejects it, but look closely at where the error lands: on `atMost(160)`, not `length`. TypeScript read `length`'s input type, decided the middle type `B` must be `string`, then flagged `atMost(160)` because it returns a `boolean`, not a `string`. The bug is the order, not either function. When a pipeline error points at a function that looks fine, check its neighbors.
 
 ## Name the data, or leave it out
 
-Introduce point-free style once `pipe2` works. This section is moved from the curried functions draft. Define `trim` and `toLowerCase` as one-argument string functions first, and link to the curried functions post once it is published.
+With `pipe2` in hand, we can build new functions without ever mentioning the data they'll operate on. Here are two one-argument string functions, and two ways to combine them:
 
 ```ts
+const trim = (value: string) => value.trim();
+const toLowerCase = (value: string) => value.toLowerCase();
+
 // names the data
 const normalizeExplicit = (value: string) => toLowerCase(trim(value));
 
 // point-free: never names it
 const normalizePointFree = pipe2(trim, toLowerCase);
+
+normalizePointFree("  Hello World  "); // "hello world"
 ```
 
-Point-free functions are functions that are "free" of the points (data) they operate on. They don't need the data at the time of creation. It's like a team of functions. They're ready to operate at the moment they get called into the game.
+Point-free functions are functions that are "free" of the points (data) they operate on. They don't need the data at the time of creation. It's like a team where the functions are our players and we're the coach. We can organize them, and line them up according to our desired formations. From there, they're ready to operate at the moment we call them into the game.
 
-`normalizePointFree` is point-free with respect to the string: it does not explicitly name or forward that parameter. It still accepts a string when called. The inner callbacks name their own `value`, so the point-free description applies to the outer definition, not every function inside it.
+Point-free only describes how we write our functions. Specifically, it means that we don't have to explicitly mention the data they're operating on, and we see this in `normalizePointFree`. `normalizePointFree` doesn't name the string that it operates on, but it still takes one when we call it.
 
-These ideas describe different parts of the example. `pipe2` is curried-style: it takes its functions first and returns a function that waits for the value. Supplying only the functions is partial application. Defining `normalizePointFree` without an explicit string parameter is point-free style.
+Before we move forward, let's quickly recap all of the concepts floating around in our heads:
 
-Confirm TypeScript still infers `(value: string) => string` for both versions. Point-free is where generic inference gets fragile, so the generic `singleton`/`box` experiment stays out of this post (see the follow-up note under variadic composition).
+- **Currying:** `pipe2` is written in a curried style. It takes its functions first, then returns a function that waits for the value it will operate on. (Strictly speaking, a fully curried function takes one argument at a time, while `pipe2`'s first call takes two.)
+- **Partial application:** when we call `pipe2(trim, toLowerCase)`, we're partially applying `pipe2`. We supply its functions now and leave the value for later, the same way we fixed `transform` as the first argument of `mapValues` in the [currying post](/posts/functional-with-types-pt-2-curried-functions).
+- **Point-free:** a coding convention that lets us define functions without having to explicitly name the inputs they operate on. There's no difference between point-free and non-point-free functions when it comes to how they run. In my opinion, point-free simply gives us a cleaner, more intuitive way to define functions.
+
+Both versions of `normalize` infer the same type: `(value: string) => string`. With concrete types like these, going point-free costs us nothing.
+
+So which style should we use? Remember, we're writing software the functional programming way, building it up through the application of functions. We want to model our software the same way we'd model math equations. In math, we'd define a function like this:
+
+$$
+f(x) = 2x
+$$
+
+In TypeScript, we can express the same thing as:
+
+```ts
+const f = (x: number) => 2 * x;
+```
+
+(Arrow functions like this one are often called lambdas, a name borrowed from lambda calculus, where this same function is written `λx.2x`.)
+
+Math also has a point-free way to define a function. If `g(x) = x + 10`, then
+
+$$
+h = g \circ f
+$$
+
+defines `h` without ever mentioning `x`. In TypeScript, that's `compose2`, with the functions in the same order:
+
+```ts
+const g = (x: number) => x + 10;
+const h = compose2(g, f);
+
+h(1); // 12
+```
+
+Point-free style gives us a medium for writing software that is incredibly legible while at the same time incredibly concise. And since we're setting out to grok functional programming in TypeScript, we're going to prefer the use of point-free functions.
 
 ## Add one more transformation
 
-Add `trim` in front, because the currying post's `fitsSummary` counted the spaces. `pipe2` only takes two functions, so a third means nesting: `pipe2(trim, pipe2(length, atMost(160)))` or `pipe2(pipe2(trim, length), atMost(160))`. Both infer `(value: string) => boolean` and return the same results (checked: `true` for `"  hi  "`, `false` for 161 characters). Point that out here; the next section explains why it always works.
+Our `fitsSummary` has a problem, and the `maxLength` check from the currying post had it too: it counts whitespace. Paste in a summary with a couple of stray spaces on either end, and a perfectly good 158-character summary fails the check:
 
-Then swap `trim` and `length` for the mismatched link: `pipe2(length, pipe2(trim, atMost(160)))` is rejected, with errors on both `length` and the inner `trim`. The nesting is clunky on purpose: it's the reason to want a variadic `pipe`.
+```ts
+const padded = "  " + "x".repeat(158) + "  "; // 162 characters
+
+fitsSummary(padded); // false
+```
+
+The fix is to trim the text before we count it. That's a third function, but `pipe2` only takes two. So for now, we nest one `pipe2` inside another:
+
+```ts
+const fitsSummary = pipe2(trim, pipe2(length, atMost(160)));
+// (value: string) => boolean
+
+fitsSummary(padded); // true
+```
+
+We could also nest it the other way around:
+
+```ts
+const fitsSummaryToo = pipe2(pipe2(trim, length), atMost(160));
+
+fitsSummaryToo(padded); // true
+```
+
+Both versions infer `(value: string) => boolean`, and both return the same answer for any summary we hand them. That's no coincidence, and we'll see why in the next section.
+
+Now let's make the mistake from earlier and swap `trim` and `length`:
+
+```ts
+const broken = pipe2(length, pipe2(trim, atMost(160)));
+// on length: Argument of type '(value: string) => number' is not
+// assignable to parameter of type '(value: string) => string'.
+// on trim: Argument of type '(value: string) => string' is not
+// assignable to parameter of type '(value: string) => number'.
+```
+
+This time TypeScript flags two errors, one for each `pipe2`. The outer one says `length` should return a `string`, because the inner pipeline starts with `trim`, which needs one. The inner one says `trim` should return a `number`, because `atMost(160)` needs one. Two mismatched connections, two errors. Remember when TypeScript couldn't catch `addTen` and `double` in the wrong order? This is the other side of that coin: when the types change between steps, the wrong order becomes a compile error.
+
+One thing is getting hard to ignore, though: all this nesting. Three functions is already clunky, and every new step means wrapping another `pipe2` around the last one. What we really want is to write `pipe(trim, length, atMost(160))` and have TypeScript check every connection. We'll get there. First, let's look at why we can trust a chain like this in the first place.
 
 ## Why we can trust the chain
 
-The determinism payoff. One idea ties the post together: a pure function call can be replaced with its result, the same substitution we do in algebra. Walk `fitsSummary` through it:
+Back in the setup, we saw that a pure function call can be swapped out for its result without changing what our program does. We called that **referential transparency**. Now that we have a real pipeline, let's put it to work.
+
+Here's `fitsSummary` again. Instead of running it, let's solve it the way we'd solve an algebra problem, replacing one call at a time with its result:
 
 ```ts
 fitsSummary("  hi  ");
@@ -176,18 +337,177 @@ fitsSummary("  hi  ");
 // = true
 ```
 
-Then show the two laws as engineering guarantees:
+Every line is equal to the line above it. The first line unpacks what `pipe2` does: it feeds each function's result into the next. From there, each step replaces one function call with the value it returns. `trim("  hi  ")` becomes `"hi"`, `length("hi")` becomes `2`, and `atMost(160)(2)` becomes `true`.
 
-- **Associativity: safe refactoring.** The two nestings from the last section return the same results, so we can pull out a sub-pipeline and name it (`normalize = pipe2(trim, toLowerCase)`) without changing behavior. The validator factory post's `createValidator(normalize, ...rules)` depends on this.
-- **Identity: `trace` is safe to add and remove.** `trace` returns its input, so adding or removing it doesn't change the result. It's the same `id` as in the functor post (link once that post is published). Say plainly that `trace` logs, so it isn't pure: it's the one side effect we allow because it never touches the value.
+We can only do this because every function in the chain is pure. `trim("  hi  ")` is `"hi"` today, tomorrow, and on every machine that runs it. Try the same trick with `greeter("friend.")` and it falls apart, because the answer depends on what `greeting` happens to be when we call it.
 
-Close the section with: types check that each connection fits, and purity makes each step return the same answer every time. Match the promise in "The question" to this: "we can reason about it like algebra" holds up, while "mathematically provable" promises more than TypeScript checks (`any`, casts, and the `unknown` inside `pipe`'s body are trusted, not checked).
+This is the overlap between deterministic software and basic algebra that I mentioned at the start of this post. We don't have to run `fitsSummary` to know what it returns. We can work it out on paper, one substitution at a time, and trust that the code will agree with us.
+
+Remember the two ways we nested `fitsSummary`? Let's unpack both the same way:
+
+```ts
+pipe2(trim, pipe2(length, atMost(160)))(x);
+// = pipe2(length, atMost(160))(trim(x))
+// = atMost(160)(length(trim(x)))
+
+pipe2(pipe2(trim, length), atMost(160))(x);
+// = atMost(160)(pipe2(trim, length)(x))
+// = atMost(160)(length(trim(x)))
+```
+
+Both groupings land on the exact same expression. That's **associativity**: when we compose functions, how we group them doesn't change the result. In math, it looks like this:
+
+$$
+(h \circ g) \circ f = h \circ (g \circ f)
+$$
+
+This is more than a math fact. It's what makes refactoring a pipeline safe. Any run of steps inside a pipeline can be pulled out, given a name, and reused, and the pipeline behaves exactly the same. We already did this without noticing: `normalizePointFree` is just `trim` and `toLowerCase`, grouped and named. Anywhere we need those two steps, we can drop in `normalizePointFree` instead.
+
+The second guarantee explains why `trace` gets a pass. A function that hands back its input unchanged is called the **identity** function, usually written `id`. Composing any function with `id` gives us back the same function:
+
+$$
+\mathrm{id} \circ f = f = f \circ \mathrm{id}
+$$
+
+`trace` is `id` with a `console.log` attached. Yes, logging is a side effect, so strictly speaking `trace` isn't pure. But the log never touches the value flowing through the pipeline. `pipe(addTen, trace("after addTen"), double)` returns exactly what `pipe(addTen, double)` returns. That's why we can drop `trace` in while debugging and pull it back out when we're done, without changing a single result.
+
+So here's what we've got. TypeScript checks that every connection in our pipeline fits: what comes out of one step is what the next step expects. Purity guarantees that every step returns the same answer every time. And where the types can't tell which order we meant, a test can. Put those together, and we can substitute, regroup, and trace our pipelines with confidence. That's what it means to reason about our software like an algebra problem.
+
+{/* PFU: Pair the function code with test code: tests verify that each function call returns the correct output. Left out of this post to stay out of TDD territory. */}
 
 ## Extend to variadic composition
 
-Give the north star its types with overloads, the way fp-ts `flow` and RxJS `pipe` do it. Overloads for one to four functions infer `(a: string) => boolean` for `pipe(trim, trace("trimmed"), length, atMost(160))`, generic `trace` included (checked in TypeScript 5.9.3). The `reduce` body stays `unknown`; the overloads are the contract the compiler checks. Write the matching `compose` overloads with the arguments reversed.
+Time to make good on our north star. The runtime half is already done: `reduce` hands each function's result to the next. What's missing is the types. The first thing most of us would reach for is an array type. Every function takes something and returns something, so let's say exactly that:
 
-Show why typing `fns` as `Array<(value: unknown) => unknown>` accepts the list but forgets the connections: the result is `(value: unknown) => unknown`. Then swap a link: `pipe(length, trim, atMost(160))` errors on `length`, saying it isn't assignable to `(a: string) => string`. Decide and document empty-pipeline behavior, then check one, three, and several stages, incompatible neighbors, and the same operations in reverse compose order.
+```ts
+const pipe =
+  (...fns: Array<(value: any) => any>) =>
+  (initialValue: any) =>
+    fns.reduce((acc, fn) => fn(acc), initialValue);
+
+const fitsSummary = pipe(trim, length, atMost(160)); // (initialValue: any) => any
+const broken = pipe(length, trim, atMost(160)); // (initialValue: any) => any
+```
+
+This compiles, but it doesn't help us. Both pipelines get the same type, so TypeScript can't tell the working one from the broken one. An array type describes every function the same way, which means it can't remember that `trim` returns a `string` and `length` expects one. The connections are gone.
+
+(We can't swap `any` for the safer `unknown`, either. A `(value: unknown) => unknown` has to accept _anything_, so TypeScript rejects `trim`, which only accepts strings.)
+
+## Leaning on overloads
+
+What we need is a separate type for every connection, just like `pipe2` had `A`, `B`, and `C`. TypeScript gives us a way to do that: **overloads**. We write out one call signature for each number of functions we want to support, and TypeScript picks the one that matches the call:
+
+```ts
+type Pipe = {
+  <A, B>(ab: (a: A) => B): (a: A) => B;
+  <A, B, C>(ab: (a: A) => B, bc: (b: B) => C): (a: A) => C;
+  <A, B, C, D>(ab: (a: A) => B, bc: (b: B) => C, cd: (c: C) => D): (a: A) => D;
+  <A, B, C, D, E>(
+    ab: (a: A) => B,
+    bc: (b: B) => C,
+    cd: (c: C) => D,
+    de: (d: D) => E
+  ): (a: A) => E;
+};
+
+const pipe: Pipe =
+  (...fns: Array<(value: any) => any>) =>
+  (value: any) =>
+    fns.reduce((acc, fn) => fn(acc), value);
+```
+
+> An overload is one function described by more than one call signature. Each signature is a different way to call that same function.
+
+Inside `Pipe`, each line is a call signature: a list of parameter types and a return type, with no name in front. In fact, `type Double = (x: number) => number` is shorthand for `{ (x: number): number }`. The braces just let us list more than one. We still have a single `pipe` function. `Pipe` describes four ways to call it, each with its own type parameters.
+
+Why not one generic signature? Because a generic signature has a fixed number of type parameters. A two-function pipeline needs `A`, `B`, and `C`, while a four-function pipeline needs five letters. One signature can't say "add a letter for every function you pass in," so we write each length out by hand. (TypeScript can get close with [variadic tuple types](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-0.html#variadic-tuple-types) and [recursive conditional types](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-1.html#recursive-conditional-types), but that's a deeper topic than this post needs.)
+
+Each signature repeats the trick that made `pipe2` work. Take the three-function signature. When we call `pipe(trim, length, atMost(160))`, TypeScript matches each function to a parameter and fills in the letters:
+
+- `ab` is `trim`, so `A` is `string` and `B` is `string`.
+- `bc` is `length`, so `B` is `string` and `C` is `number`.
+- `cd` is `atMost(160)`, so `C` is `number` and `D` is `boolean`.
+
+`B` shows up twice: it's what `trim` returns and what `length` accepts. `C` does the same between `length` and `atMost(160)`. Each letter can only stand for one type, so if `trim` returned a `number` while `length` still wanted a `string`, there'd be no single type for `B`, and TypeScript would refuse to compile. That's every connection, checked. The function we get back is `(a: A) => D`, which here works out to `(a: string) => boolean`.
+
+The arrow function underneath is our north star, almost character for character. Because it's annotated with `Pipe`, callers never see its own signature, only the four in `Pipe`. That's why the `any`s inside are OK. In the [generics post](/posts/functional-with-types-pt-1-generics), `any` was the villain because it switched off the checks we cared about. Here, it's contained: it lives inside the implementation, and `Pipe` checks every connection before a caller ever gets near it.
+
+```ts
+const fitsSummary = pipe(trim, length, atMost(160));
+// (a: string) => boolean
+
+const fitsSummaryTraced = pipe(trim, trace("trimmed"), length, atMost(160));
+// (a: string) => boolean
+```
+
+No nesting, and TypeScript still infers `(a: string) => boolean`. It even handles our generic `trace` in the middle: `trace("trimmed")` receives a `string`, so it returns a `string`, and `length` gets exactly what it expects.
+
+And if we swap two functions, TypeScript catches it the same way it did with `pipe2`:
+
+```ts
+const broken = pipe(length, trim, atMost(160));
+// Argument of type '(value: string) => number' is not assignable
+// to parameter of type '(a: string) => string'.
+```
+
+TypeScript read `trim`'s input type, decided `B` must be `string`, and flagged `length` for returning a `number` instead. Same lesson as before: when the error points at a function that looks fine, check its neighbors.
+
+## Typing compose
+
+`compose` gets the same treatment. Its signatures match `Pipe`'s, with the parameters listed in reverse, so they read right to left like the math:
+
+```ts
+type Compose = {
+  <A, B>(ab: (a: A) => B): (a: A) => B;
+  <A, B, C>(bc: (b: B) => C, ab: (a: A) => B): (a: A) => C;
+  <A, B, C, D>(cd: (c: C) => D, bc: (b: B) => C, ab: (a: A) => B): (a: A) => D;
+  <A, B, C, D, E>(
+    de: (d: D) => E,
+    cd: (c: C) => D,
+    bc: (b: B) => C,
+    ab: (a: A) => B
+  ): (a: A) => E;
+};
+
+const compose: Compose =
+  (...fns: Array<(value: any) => any>) =>
+  (value: any) =>
+    fns.reduceRight((acc, fn) => fn(acc), value);
+
+const fitsSummary = compose(atMost(160), length, trim);
+// (a: string) => boolean
+```
+
+The only change in the implementation is `reduceRight` in place of `reduce`, just like our north star. `compose(atMost(160), length, trim)` reads like `atMost(160) ∘ length ∘ trim`, and it builds the exact same function as `pipe(trim, length, atMost(160))`.
+
+## Too few functions, or too many
+
+What happens if we call `pipe` with no functions at all? At runtime, nothing bad: `reduce` with no functions just hands back the initial value. But TypeScript won't let us get that far:
+
+```ts
+const nothing = pipe();
+// Expected 1-4 arguments, but got 0.
+```
+
+None of our signatures takes zero functions, so TypeScript rejects the call. We could leave it there, since an empty pipeline is probably a mistake. But there's a better answer hiding in the math from earlier. A pipeline with no steps should hand back exactly what it was given, and we already have a name for that function: identity. Let's add one more signature to `Pipe`:
+
+```ts
+type Pipe = {
+  (): <A>(a: A) => A;
+  <A, B>(ab: (a: A) => B): (a: A) => B;
+  // ...the other three signatures, unchanged
+};
+
+const nothing = pipe();
+// <A>(a: A) => A
+
+nothing(5); // 5
+nothing("five"); // "five"
+```
+
+`<A>(a: A) => A` is the same generic identity function from the [generics post](/posts/functional-with-types-pt-1-generics). The implementation doesn't change at all. The runtime already did the right thing; the types just needed to say so.
+
+Our overloads have a limit on the other end, too: they stop at four functions. Pass in five, and TypeScript tells us `Expected 0-4 arguments, but got 5.` For a longer pipeline, we can add more signatures (libraries like fp-ts write out many more for exactly this reason), or we can nest one `pipe` inside another. Associativity guarantees that grouping doesn't change the result.
 
 The validator factory post only needs normalization followed by validation, so readers don't need more than overloads to follow it.
 
