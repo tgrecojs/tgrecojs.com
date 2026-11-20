@@ -2,8 +2,8 @@
 
 Thomas Greco's personal site. Astro, static output, deployed on Vercel.
 
-Posts are MDX files in `src/content/posts`. Posts from the Hindley Milner blog are mirrored
-in by a script; posts written here are written here.
+Posts are MDX files in `src/content/posts`. This site is the source of truth: engineering
+posts flagged with `crosspost: hindleymilner` are mirrored to blog.hindleymilner.com.
 
 ## Commands
 
@@ -12,7 +12,6 @@ in by a script; posts written here are written here.
 | `npm run dev`                   | Dev server at localhost:4321 (drafts visible)         |
 | `npm run build`                 | Typecheck and build to `dist/` (drafts excluded)      |
 | `npm run preview`               | Serve `dist/` locally                                 |
-| `npm run mirror`                | Copy posts from `../hm-blog` into `src/content/posts` |
 | `npm run new-post -- --title X` | Scaffold a draft post                                 |
 
 ## Writing a post
@@ -61,19 +60,17 @@ published posts newest first, reading time from the body when `minutesRead` is n
 neighbours, related posts, and the alternating dot colour (cobalt on even slots, mustard
 on odd).
 
-## Mirroring Hindley Milner posts
+## Cross-posting to Hindley Milner Systems
+
+Add `crosspost: hindleymilner` to the frontmatter of an engineering post. Leave it off
+personal posts. Then, from a sibling checkout of hm-blog:
 
 ```bash
-npm run mirror
+cd ../hm-blog && npm run mirror
 ```
 
-Reads every post in `../hm-blog/src/content/blog`, adds `source: hindleymilner`,
-and writes it to `src/content/posts/<same-id>.mdx`.
-Mirrored files are generated: edit the original in hm-blog and mirror again. A mirrored
-post keeps its draft flag, so HM drafts never reach this site's production build.
-
-All posts appear as local tgrecojs.com articles, with local canonical URLs and no
-mirroring notices. Hindley Milner Systems is linked only in the footer.
+Only published posts (`draft: false`) are mirrored. The copy on blog.hindleymilner.com
+gets a canonical URL pointing back here, so search engines credit this site.
 
 ## Offline
 

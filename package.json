@@ -9,7 +9,6 @@
     "build": "astro check && astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "mirror": "node scripts/mirror-hm.mjs",
     "new-post": "node scripts/new-post.mjs",
     "test": "npm run build && node --test tests/*.test.mjs"
   },
