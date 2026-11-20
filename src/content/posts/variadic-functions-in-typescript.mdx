@@ -1,0 +1,202 @@
+---
+title: "Strongly Typed Variadic Functions in TypeScript"
+description: "Type pipe and compose with overloads so TypeScript checks every connection in pipelines of different lengths."
+pubDate: 2026-11-17
+tags: ["typescript", "composition", "functional-programming"]
+series: "Functional Programming, with Types"
+seriesOrder: 4
+draft: true
+---
+
+import TsSandbox from "../../components/ts-sandbox/TsSandbox.astro";
+import playground from "../../sandbox/typed-fp/variadic-composition/playground.ts?raw";
+
+{/*
+> **Work plan.** Split from the composition post on Nov 17, 2026. Same loop as before: review a section, ask Claude to check the code and claims, then delete its note and tick the box.
+>
+> - [x] **Moved sections** ("Extend to variadic composition", "Leaning on overloads", "Typing compose", "Too few functions, or too many").
+> - [ ] **New opening** ("The question", "Where we're starting"). Drafted by Claude; needs your review.
+> - [ ] **Ending** ("Try it yourself", "Recap"). Drafted by Claude; needs your review.
+> - [ ] **Final revisions.** Heading pass (the contents list only shows h2s), keep either the overloads explainer or the letters walkthrough (they overlap), make sure the composition post is published before this one so its link works, and your rewrites.
+*/}
+
+## The question
+
+In [Function Composition in TypeScript](/posts/function-composition-in-typescript), we built `pipe2`, a typed `pipe` that connects exactly two functions. In this post, we'll answer the next question: how do we type a `pipe` that takes a variable number of functions while TypeScript checks every connection between them?
+
+## Where we're starting
+
+`pipe2` takes two functions and returns a new function that runs them in order. Its three type parameters link them together: `A` goes in, `B` passes between them, and `C` comes out.
+
+```ts
+const pipe2 =
+  <A, B, C>(first: (value: A) => B, second: (value: B) => C) =>
+  (value: A): C =>
+    second(first(value));
+```
+
+We'll compose a few small functions along the way, including `trace`, which logs whatever passes through it and hands it back untouched:
+
+```ts
+const trim = (value: string) => value.trim();
+const length = (value: string) => value.length;
+const atMost = (limit: number) => (count: number) => count <= limit;
+
+const trace =
+  (label: string) =>
+  <T>(value: T): T => {
+    console.log(label, "::", value);
+    return value;
+  };
+```
+
+With only `pipe2`, checking whether a trimmed summary fits in 160 characters means nesting one `pipe2` inside another:
+
+```ts
+const fitsSummary = pipe2(trim, pipe2(length, atMost(160)));
+// (value: string) => boolean
+```
+
+That works, but every new step means another layer.
+
+## Extend to variadic composition
+
+At runtime, `.reduce()` can hand each function's result to the next. Let's start by typing the functions as an array.
+
+```ts
+const pipe =
+  (...fns: Array<(value: any) => any>) =>
+  (initialValue: any) =>
+    fns.reduce((acc, fn) => fn(acc), initialValue);
+
+const fitsSummary = pipe(trim, length, atMost(160)); // (initialValue: any) => any
+const broken = pipe(length, trim, atMost(160)); // (initialValue: any) => any
+```
+
+This compiles, but it doesn't help us. Both pipelines get the same type, so TypeScript can't tell the working one from the broken one. An array type describes every function the same way, which means it can't remember that `trim` returns a `string` and `length` expects one. The connections are gone.
+
+(We can't swap `any` for the safer `unknown`, either. A `(value: unknown) => unknown` has to accept _anything_, so TypeScript rejects `trim`, which only accepts strings.)
+
+## Leaning on overloads
+
+What we need is a separate type for every connection, just like `pipe2` had `A`, `B`, and `C`. TypeScript gives us a way to do that: **overloads**. We write out one call signature for each number of functions we want to support, and TypeScript picks the one that matches the call:
+
+```ts
+type Pipe = {
+  <A, B>(ab: (a: A) => B): (a: A) => B;
+  <A, B, C>(ab: (a: A) => B, bc: (b: B) => C): (a: A) => C;
+  <A, B, C, D>(ab: (a: A) => B, bc: (b: B) => C, cd: (c: C) => D): (a: A) => D;
+  <A, B, C, D, E>(
+    ab: (a: A) => B,
+    bc: (b: B) => C,
+    cd: (c: C) => D,
+    de: (d: D) => E,
+  ): (a: A) => E;
+};
+
+const pipe: Pipe =
+  (...fns: Array<(value: any) => any>) =>
+  (value: any) =>
+    fns.reduce((acc, fn) => fn(acc), value);
+```
+
+These four call signatures describe ways to call the same `pipe` function. Each one covers a different number of steps.
+
+Each signature repeats the trick that made `pipe2` work. Take the three-function signature. When we call `pipe(trim, length, atMost(160))`, TypeScript matches each function to a parameter and fills in the letters:
+
+- `ab` is `trim`, so `A` is `string` and `B` is `string`.
+- `bc` is `length`, so `B` is `string` and `C` is `number`.
+- `cd` is `atMost(160)`, so `C` is `number` and `D` is `boolean`.
+
+The shared `B` and `C` check the connections. The function we get back is `(a: A) => D`, which here works out to `(a: string) => boolean`.
+
+Callers see the signatures in `Pipe`. The implementation still uses `any` to run the steps, so the overloads are the part that checks the connections at the call site.
+
+```ts
+const fitsSummary = pipe(trim, length, atMost(160));
+// (a: string) => boolean
+
+const fitsSummaryTraced = pipe(trim, trace("trimmed"), length, atMost(160));
+// (a: string) => boolean
+```
+
+No nesting, and TypeScript still infers `(a: string) => boolean`. It even handles our generic `trace` in the middle: `trace("trimmed")` receives a `string`, so it returns a `string`, and `length` gets exactly what it expects.
+
+And if we swap two functions, TypeScript catches it:
+
+```ts
+const broken = pipe(length, trim, atMost(160));
+// Argument of type '(value: string) => number' is not assignable
+// to parameter of type '(a: string) => string'.
+```
+
+## Typing compose
+
+`compose` gets the same treatment. Its signatures match `Pipe`'s, with the parameters listed in reverse, so they read right to left like the math:
+
+```ts
+type Compose = {
+  <A, B>(ab: (a: A) => B): (a: A) => B;
+  <A, B, C>(bc: (b: B) => C, ab: (a: A) => B): (a: A) => C;
+  <A, B, C, D>(cd: (c: C) => D, bc: (b: B) => C, ab: (a: A) => B): (a: A) => D;
+  <A, B, C, D, E>(
+    de: (d: D) => E,
+    cd: (c: C) => D,
+    bc: (b: B) => C,
+    ab: (a: A) => B,
+  ): (a: A) => E;
+};
+
+const compose: Compose =
+  (...fns: Array<(value: any) => any>) =>
+  (value: any) =>
+    fns.reduceRight((acc, fn) => fn(acc), value);
+
+const fitsSummary = compose(atMost(160), length, trim);
+// (a: string) => boolean
+```
+
+`compose` uses `.reduceRight()` to run the same steps as `pipe(trim, length, atMost(160))`.
+
+## Too few functions, or too many
+
+What happens if we call `pipe` with no functions at all? At runtime, nothing bad: `reduce` with no functions just hands back the initial value. But TypeScript won't let us get that far:
+
+```ts
+const nothing = pipe();
+// Expected 1-4 arguments, but got 0.
+```
+
+A pipeline with no steps can hand back exactly what it was given. That function already has a name, identity. Let's add one more signature to `Pipe`.
+
+```ts
+type Pipe = {
+  (): <A>(a: A) => A;
+  <A, B>(ab: (a: A) => B): (a: A) => B;
+  // ...the other three signatures, unchanged
+};
+
+const nothing = pipe();
+// <A>(a: A) => A
+
+nothing(5); // 5
+nothing("five"); // "five"
+```
+
+`<A>(a: A) => A` is the same generic identity function from the [generics post](/posts/generics-in-typescript). The implementation doesn't change at all. The runtime already did the right thing; the types just needed to say so.
+
+Our overloads have a limit on the other end, too: they stop at four functions. Pass in five, and TypeScript tells us `Expected 0-4 arguments, but got 5.` For a longer pipeline, we can add more signatures, or we can nest one `pipe` inside another. Function composition is associative, so how we group the functions doesn't change the result.
+
+{/* PFU: Follow-up post on variadic pipe with recursive tuple and conditional types, plus generic inference limits. Carry over the singleton/box experiment: pipe2(singleton, box) keeps its generic relationship, while the runtime-equivalent compose2(box, singleton) fails inference in TypeScript 5.9.3 with the signature above; use concrete callback types or explicit type arguments to show its runtime order first. Avoid promising unbounded compiler recursion or universal inference for arbitrary generic callbacks. */}
+
+## Try it yourself
+
+Press **Edit this code** and swap `length` and `atMost(160)` in `fitsSummary`. Where does the type error land?
+
+<TsSandbox
+  id="composition-playground"
+  title="Composition playground"
+  code={playground}
+/>
+
+{/* Writing source: Logseq / Extending for variadic functions. Practice: lab 4 introduces tuple tools, not a complete variadic-pipe solution. References: [TS 3.4 higher-order inference](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-4.html), [TS 4.0 variadic tuples](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-0.html). */}

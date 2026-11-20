@@ -10,6 +10,26 @@
       "source": "/og/union-types-are-the-typescript-feature-i-should-have-learned-first.png",
       "destination": "/og/prevent-impossible-states-pt-1-union-types.png",
       "statusCode": 301
+    },
+    {
+      "source": "/posts/functional-with-types-pt-1-generics",
+      "destination": "/posts/generics-in-typescript",
+      "statusCode": 301
+    },
+    {
+      "source": "/og/functional-with-types-pt-1-generics.png",
+      "destination": "/og/generics-in-typescript.png",
+      "statusCode": 301
+    },
+    {
+      "source": "/posts/functional-with-types-pt-2-curried-functions",
+      "destination": "/posts/curried-functions-in-typescript",
+      "statusCode": 301
+    },
+    {
+      "source": "/og/functional-with-types-pt-2-curried-functions.png",
+      "destination": "/og/curried-functions-in-typescript.png",
+      "statusCode": 301
     }
   ]
 }

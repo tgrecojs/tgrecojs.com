@@ -4,9 +4,9 @@ description: Use currying to create reusable functions while keeping TypeScript 
 pubDate: 2026-11-12
 tags: ["typescript", "generics", "functional-programming"]
 draft: false
-source: here
 series: "Functional Programming, with Types"
 seriesOrder: 2
+crosspost: hindleymilner
 ---
 
 import TsSandbox from "../../components/ts-sandbox/TsSandbox.astro";
@@ -19,7 +19,7 @@ Currying plays an important role in the functional programmer's toolkit. In this
 
 ## Everything Everywhere All at Once
 
-In [Generics in TypeScript](/posts/functional-with-types-pt-1-generics), I discussed how to use a type parameter to establish a relationship between a function's input and its output. In this post, we'll see how to establish the same relationship on generalized functions that haven't received the data they're operating on.
+In [Generics in TypeScript](/posts/generics-in-typescript), I discussed how to use a type parameter to establish a relationship between a function's input and its output. In this post, we'll see how to establish the same relationship on generalized functions that haven't received the data they're operating on.
 
 Before getting into that though, let's take a look at our starting point - `mapValues` which is essentially a wrapper for JavaScript's [`Array.prototype.map()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) method. Running it logs an object whose `lengths` property is a `number[]`:
 

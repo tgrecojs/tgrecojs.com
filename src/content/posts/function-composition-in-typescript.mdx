@@ -1,0 +1,239 @@
+---
+title: "Function Composition in TypeScript"
+description: "Connect transformations with typed pipe and compose, then see why pure functions let us reason about the result like an algebra problem."
+pubDate: 2026-11-02
+tags: ["typescript", "composition", "functional-programming"]
+draft: true
+source: here
+series: "Functional Programming, with Types"
+seriesOrder: 3
+---
+
+{/*
+
+> **Work plan.** One phase at a time, top to bottom. For each section: write it from its note, put its code in a TsSandbox file under `src/sandbox/typed-fp/pt3-composition/`, ask Claude to check the code and claims, then delete the note and tick the box. Final revisions start once every box is ticked.
+>
+> - [x] **A. Setup** ("The question", "f of g of x").
+> - [x] **B. Two-function core** ("Start with the runtime order", "Link the three types in the two-function version").
+> - [x] **C. Point-free and a third function** ("Name the data, or leave it out", "Add one more transformation").
+> - [x] **D. The payoff** ("Why we can trust the chain").
+> - [x] **E. Ending** ("Recap"). The variadic sections, playground, and recursive-types PFU moved to "Strongly Typed Variadic Functions in TypeScript" (`variadic-functions-in-typescript.mdx`).
+> - [ ] **Final revisions.** Heading pass (the contents list only shows h2s), the final-pass notes, your rewrites, and the cut list:
+>   - Show the swap errors in one sandbox instead of describing them in two sections (about −200 words).
+>   - Point-free: the definition paragraph, the "only describes how we write" paragraph, and the recap bullet overlap; the lambda aside could go (about −150).
+>   - `pipe` and `compose`: the branding sentences at the end of "So is order just a blind spot" (about −40).
+>   - Setup: the impure `addTen` and `greeter` make the same point; `greeter` alone carries referential transparency (about −100).
+
+\*/}
+
+## The question
+
+I ended the [currying post](/posts/curried-functions-in-typescript) with two functions that check the length of a title and a summary. We set up each check ahead of time and called it when we had text to check. That got me thinking about how we could connect several functions the same way and keep their types intact.
+
+Function composition lets us build a new function by passing each result to the next function in the chain. In this post, we'll use TypeScript to check that those connections fit and infer the input and return types of the function we build.
+
+## Joining forces
+
+Say we want to check whether a post summary fits within its character limit. Our goal is to handle the following:
+
+1. trim the text
+2. count its characters
+3. compare that count with the limit
+
+## f of g of x
+
+Nearly ten years ago, I had a fairly major aha moment after seeing the overlap between deterministic software and basic algebra. At the heart of this epiphany was the fact that at the core of "good", deterministic software was the composition law that I had learned so many years ago.
+
+$$
+(f \circ g)(x) = f(g(x))
+$$
+
+`(f ∘ g)(x)` means we call `g` first and pass its result to `f`. When both functions are pure, the same input gives us the same result each time. This attribute is known as referential transparency. If `f(x) = 2x`, then we can substitute out `f(2)` and `8` and always get the same result.
+
+Let's double-click on pure functions for a moment though.
+
+> Pure functions are functions that, given an input, always return the same output and have no side effects.
+
+Definitions are great and all, but the best way to observe this is through a code sample, so let's look at the classic `greeter` function.
+
+```ts
+let greeting = `Hello`;
+const greeter = (name: string) => `${greeting}, ${name}`;
+
+greeter("friend."); // Hello, friend.
+greeting = `I really do not care for you`;
+greeter("friend."); // I really do not care for you, friend... not nice
+```
+
+If we trace this through, we see that `greeter` returns 2 different answers due to it's reliance on shared, mutable state. We have the same function call with the same input, yet we receive 2 different answers.
+
+Going back to the composition law, let's take a look at the following code bock:
+
+
+```ts
+const f = (x: number) => x * 2;
+const g = (x: number) => x + 10;
+
+const x = [5];
+
+ 
+const leftSide = x.map(g).map(f);
+const rightSide = x.map(value => f(g(value)));
+
+// should I use the node:assert library here?
+leftSide.toString() === rightSide.toString()
+````
+
+We have 2 pure functions, `f` and `g`, and we see that processing them one after another gives us the exact same output as if we evaluted `x` through them in one step. Additionally, we can substite out `f(x)` for `4`, and we get the exact same result - referential transparency.
+
+> An expression is referentially transparent when we can replace it with its value without changing what the program does.
+
+Every call to a pure function is referentially transparent. This is in contrast to the `greeter` function we looked at before, which depends on when we call it. So, with our understanding of pure functions and referntial transparency in mind, let's move forward to see how we can wire up `pipe` and `compose` functions to be vehices for performing function composition.
+
+## `pipe` and `compose`
+
+`pipe` runs its functions left to right, while `compose` runs them right to left. With two functions, `pipe2(f, g)` and `compose2(g, f)` both evaluate `g(f(x))` when we pass in `x`.
+
+`compose2(g, f)` matches the math, `g ∘ f`, while `pipe2(f, g)` matches the order the functions run.
+
+Both return a new function that waits for its data.
+
+```ts
+const addTen = (x: number) => x + 10;
+const double = (x: number) => x * 2;
+
+pipe2(addTen, double)(1); // 22
+pipe2(double, addTen)(1); // 12
+compose2(double, addTen)(1); // 22
+```
+
+Same two functions, different order, different answer. `addTen` and `double` both take a `number` and return a `number`, so the types pass regardless of which one goes first. A test can check that we got the result we meant.
+
+## Link the three types in the two-function version
+
+Let's write typed versions that take exactly two functions.
+
+```ts
+const pipe2 =
+  <A, B, C>(first: (value: A) => B, second: (value: B) => C) =>
+  (value: A): C =>
+    second(first(value));
+
+const compose2 =
+  <A, B, C>(second: (value: B) => C, first: (value: A) => B) =>
+  (value: A): C =>
+    second(first(value));
+```
+
+`A` is the type going in, and `C` is the type coming out. `B` shows up twice, as the first function's return type and the second function's parameter type. That shared `B` is how TypeScript checks that the output of one function fits the input of the next.
+
+In the [currying post](/posts/curried-functions-in-typescript), `maxLength(160)` counted a summary's characters and compared the count to the limit, all in one function. Let's split those two jobs apart:
+
+```ts
+const length = (value: string) => value.length;
+const atMost = (limit: number) => (count: number) => count <= limit;
+
+const fitsSummary = pipe2(length, atMost(160));
+// (value: string) => boolean
+
+fitsSummary("x".repeat(160)); // true
+fitsSummary("x".repeat(161)); // false
+```
+
+TypeScript infers `A` as `string`, `B` as `number`, and `C` as `boolean`, so `fitsSummary` is a `(value: string) => boolean`. `compose2(atMost(160), length)` runs the same steps, with the arguments listed in the opposite order.
+
+Now let's swap them:
+
+```ts
+const broken = pipe2(atMost(160), length);
+// Argument of type '(count: number) => boolean' is not assignable
+// to parameter of type '(value: number) => string'.
+```
+
+TypeScript flags `atMost(160)` because it returns a `boolean` and `length` expects a `string`. When a pipeline error points at a function that looks fine, check its neighbors.
+
+## Name the data, or leave it out
+
+With `pipe2` in hand, we can build new functions without ever mentioning the data they'll operate on. Here are two one-argument string functions, and two ways to combine them:
+
+```ts
+const trim = (value: string) => value.trim();
+const toLowerCase = (value: string) => value.toLowerCase();
+
+// names the data
+const normalizeExplicit = (value: string) => toLowerCase(trim(value));
+
+// point-free: never names it
+const normalizePointFree = pipe2(trim, toLowerCase);
+
+normalizePointFree("  Hello World  "); // "hello world"
+```
+
+`normalizePointFree` leaves the string parameter out of the definition. We still pass a string when we call it. Both versions infer the same type, `(value: string) => string`.
+
+## Add one more transformation
+
+Our `fitsSummary` has a problem, and the `maxLength` check from the currying post had it too: it counts whitespace. Paste in a summary with a couple of stray spaces on either end, and a perfectly good 158-character summary fails the check:
+
+```ts
+const padded = "  " + "x".repeat(158) + "  "; // 162 characters
+
+fitsSummary(padded); // false
+```
+
+The fix is to trim the text before we count it. `fitsSummary` already handles the count and the comparison, so we can pass it to `pipe2` as one step.
+
+```ts
+const fitsTrimmedSummary = pipe2(trim, fitsSummary);
+// (value: string) => boolean
+
+fitsTrimmedSummary(padded); // true
+```
+
+We could also nest it the other way around:
+
+```ts
+const fitsSummaryToo = pipe2(pipe2(trim, length), atMost(160));
+
+fitsSummaryToo(padded); // true
+```
+
+## Why we can trust the chain
+
+Back in the setup, we saw that a pure function call can be swapped out for its result without changing what our program does. We called that **referential transparency**. Now that we have a real pipeline, let's put it to work.
+
+Let's work out what `fitsTrimmedSummary` returns, replacing one call at a time with its result.
+
+```ts
+fitsTrimmedSummary("  hi  ");
+// = atMost(160)(length(trim("  hi  ")))
+// = atMost(160)(length("hi"))
+// = atMost(160)(2)
+// = true
+```
+
+Try the same trick with `greeter("friend.")` and it falls apart, because the answer depends on what `greeting` happens to be when we call it.
+
+We can unpack both groupings the same way.
+
+```ts
+pipe2(trim, pipe2(length, atMost(160)))(x);
+// = pipe2(length, atMost(160))(trim(x))
+// = atMost(160)(length(trim(x)))
+
+pipe2(pipe2(trim, length), atMost(160))(x);
+// = atMost(160)(pipe2(trim, length)(x))
+// = atMost(160)(length(trim(x)))
+```
+
+Both groupings land on the exact same expression. That's **associativity**: when we compose functions, how we group them doesn't change the result. In math, it looks like this:
+
+$$
+(h \circ g) \circ f = h \circ (g \circ f)
+$$
+
+This is more than a math fact. It's what makes refactoring a pipeline safe. Any run of steps inside a pipeline can be pulled out, given a name, and reused, and the pipeline behaves exactly the same. We already did this without noticing: `normalizePointFree` is just `trim` and `toLowerCase`, grouped and named. Anywhere we need those two steps, we can drop in `normalizePointFree` instead.
+
+{/* PFU: Pair the function code with test code: tests verify that each function call returns the correct output. Left out of this post to stay out of TDD territory. */}
+
+{/* Writing source: Logseq / Carrying types through composition. Practice: lab 3. References: [TS 3.4 higher-order inference](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-4.html). */}

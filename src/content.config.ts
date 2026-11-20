@@ -4,9 +4,9 @@ import { glob } from 'astro/loaders';
 
 // `post.id` is the filename without extension and becomes the URL: /posts/<id>.
 //
-// `source` says where a post was first published. Posts mirrored from
-// hindleymilner.com are written by scripts/mirror-hm.mjs, carry
-// `source: hindleymilner`, and should not be edited here. All posts publish locally.
+// This site is the source of truth for every post. Set `crosspost: hindleymilner` on
+// engineering posts to have hm-blog's `npm run mirror` copy them to
+// blog.hindleymilner.com (published posts only, with a canonical link back here).
 const posts = defineCollection({
   loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/posts' }),
   schema: z.object({
@@ -16,7 +16,7 @@ const posts = defineCollection({
     updatedDate: z.coerce.date().optional(),
     tags: z.array(z.string()).default([]),
     draft: z.boolean().default(false),
-    source: z.enum(['here', 'hindleymilner']).default('here'),
+    crosspost: z.literal('hindleymilner').optional(),
     canonical: z.string().url().optional(),
     series: z.string().optional(),
     seriesOrder: z.number().optional(),
