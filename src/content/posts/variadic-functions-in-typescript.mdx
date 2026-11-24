@@ -1,15 +1,14 @@
 ---
 title: "Strongly Typed Variadic Functions in TypeScript"
 description: "Type pipe and compose with overloads so TypeScript checks every connection in pipelines of different lengths."
-pubDate: 2026-11-17
+pubDate: 2026-11-24
 tags: ["typescript", "composition", "functional-programming"]
 series: "Functional Programming, with Types"
 seriesOrder: 4
-draft: true
+draft: false
 ---
 
 import TsSandbox from "../../components/ts-sandbox/TsSandbox.astro";
-import playground from "../../sandbox/typed-fp/variadic-composition/playground.ts?raw";
 import startingPoint from "../../sandbox/typed-fp/variadic-composition/starting-point.ts?raw";
 import transformations from "../../sandbox/typed-fp/variadic-composition/transformations.ts?raw";
 import nestedPipeline from "../../sandbox/typed-fp/variadic-composition/nested-pipeline.ts?raw";
@@ -23,20 +22,13 @@ import functionsSource from "../../sandbox/typed-fp/variadic-composition/functio
 import pipeSource from "../../sandbox/typed-fp/variadic-composition/pipe.ts?raw";
 import composeSource from "../../sandbox/typed-fp/variadic-composition/compose.ts?raw";
 import pipe2Source from "../../sandbox/typed-fp/variadic-composition/pipe2.ts?raw";
+import progressiveOverloads from "../../sandbox/typed-fp/variadic-composition/progressive-overloads.ts?raw";
 
-## The question
+In [Strongly Typed Function Composition](/posts/function-composition), we built `pipe2`, a typed `pipe` that connects exactly two functions. This was useful, but each call could only connect two functions. In this post, we'll take the next step to answer the question: how do we type `pipe` and `compose` that take a variable number of functions while having TypeScript check every connection between them?
 
-{/* **Work plan.** Split from the composition post on Nov 17, 2026. Same loop as before: review a section, ask Claude to check the code and claims, then delete its note and tick the box. */}
+## Quick refresher
 
-{/* [x] **Moved sections** ("Extend to variadic composition", "Leaning on overloads", "Typing compose", "Too few functions, or too many"). */}
-{/* [ ] **New opening** ("The question", "Where we're starting"). Drafted by Claude; needs your review. */}
-{/* [ ] **Ending** ("Try it yourself", "Recap"). Drafted by Claude; needs your review. */}
-
-{/* [ ] **Final revisions.** Heading pass (the contents list only shows h2s), keep either the overloads explainer or the letters walkthrough (they overlap), make sure the composition post is published before this one so its link works, and your rewrites. */}
-
-In [Strongly Typed Function Composition](/posts/function-composition), we built `pipe2`, a typed `pipe` that connects exactly two functions. In this post, we'll answer the next question: how do we type `pipe` and `compose` that take a variable number of functions while having TypeScript check every connection between them?
-
-## Where we're starting
+To warm ourselves up a bit, we'll take a quick look at the aforementioned `pipe2` function.
 
 `pipe2` takes two functions and returns a new function that runs them in order. Its three type parameters link them together: `A` goes in, `B` passes between them, and `C` comes out.
 
@@ -46,7 +38,7 @@ In [Strongly Typed Function Composition](/posts/function-composition), we built 
   code={startingPoint}
 />
 
-We'll compose a few small functions along the way, including `trace`, which logs whatever passes through it and hands it back untouched:
+Next, let's acquaint ourselves with a few utility functions, including the illustrious `trace`. We'll use it to log labelled values at different points in the pipeline. Logging is a side effect, but `trace` returns the value unchanged.
 
 <TsSandbox
   id="variadic-transformations"
@@ -54,7 +46,7 @@ We'll compose a few small functions along the way, including `trace`, which logs
   code={transformations}
 />
 
-With only `pipe2`, checking whether a trimmed summary fits in 160 characters means nesting one `pipe2` inside another:
+`pipe2`, check. Utility functions, check. Now, let's see the limitations of `pipe2` firsthand. We'll illustrate this by checking whether a trimmed summary fits in 160 characters. Here, we nest one `pipe2` inside another.
 
 <TsSandbox
   id="variadic-nested-pipeline"
@@ -63,17 +55,15 @@ With only `pipe2`, checking whether a trimmed summary fits in 160 characters mea
   files={{ "functions.ts": functionsSource, "pipe2.ts": pipe2Source }}
 />
 
-That works, but every new step means another layer. This is why we're going to extend its capabilities to accepting multiple functions. If we want to compose multiple layers of encapsulated logic, we can.
+It works, but every new step means another layer. We can get around this by extending `pipe` and `compose` to accept more than two functions, while still having TypeScript check the types between transformations.
 
-## Extend to variadic composition
+## Extending to variadic composition
 
-At runtime, `.reduce()` and `.reduceRight` can hand each function's result to the next, so we're going to use it to create versions of `pipe` and `compose` that allow us to combine multiple layers of logic encapsulated within functions.
+At runtime, `.reduce()` and `.reduceRight()` can hand each function's result to the next, meaning that we can use both to create versions of `pipe` and `compose` that allow us to combine multiple layers of logic.
 
-{/* We can use both `.reduce()` and `.reduceRight()` (for `compose`) to build functions */}
+Our goal is to find a way to type this that lets us benefit from TypeScript's type system while also enjoying the fruits of composition.
 
-Our goal is to find the best way to type this - a way that will allow us to still benefit from TypeScript's type system while also enjoying the joys of composition.
-
-For our first pass, we'll type the input functions as an array.
+For our first pass, we'll type the rest parameter `...fns` as an array of functions.
 
 <TsSandbox
   id="variadic-unsafe-pipe"
@@ -82,13 +72,17 @@ For our first pass, we'll type the input functions as an array.
   files={{ "functions.ts": functionsSource }}
 />
 
-This compiles, but it doesn't help us. Both pipelines get the same type, so TypeScript can't tell the working one from the broken one. An array type describes every function the same way, which means it can't remember that `trim` returns a `string` and `length` expects one. The connections are gone.
+This compiles, but it doesn't help us much. Both pipelines get the same type, so TypeScript can't tell the working one from the broken one.
 
-We can't swap `any` for the safer `unknown`, either. A `(value: unknown) => unknown` has to accept _anything_, so TypeScript rejects `trim`, which only accepts strings.
+This is because `Array<(value: any) => any>` gives every function the same input and return types. It forgets that `trim` returns a `string` and `length` expects one. The connections we so badly want are gone.
 
-## Leaning on overloads
+We can't swap `any` for the safer `unknown` either. A `(value: unknown) => unknown` has to accept _anything_, so when TypeScript sees `trim`, which only accepts strings, it rejects it.
 
-What we need is a separate type for every connection, just like `pipe2` had `A`, `B`, and `C`. TypeScript gives us a way to do that: **overloads**. We write out one call signature for each number of functions we want to support, and TypeScript picks the one that matches the call:
+## Won't you help me cure this, `overloads`?
+
+With `pipe2`, we used a separate type for every connection: `A`, `B`, and `C`. With `pipe` and `compose`, we can lean on TypeScript's **overloads** feature.
+
+**Overloads** give us a vehicle for writing out one call signature for each number of functions we wish to support. Once that's wired up, TypeScript will automatically pick the signature that matches the call.
 
 <TsSandbox
   id="variadic-typed-pipe"
@@ -97,9 +91,9 @@ What we need is a separate type for every connection, just like `pipe2` had `A`,
   files={{ "functions.ts": functionsSource }}
 />
 
-These four call signatures describe ways to call the same `pipe` function. Each one covers a different number of steps.
+These four call signatures describe ways to call the same `pipe` function, with each one covering a different number of steps. If you inspect the signature, you'll see each one repeat the trick that made `pipe2` work.
 
-Each signature repeats the trick that made `pipe2` work. Take the three-function signature. When we call `pipe(trim, length, atMost(160))`, TypeScript matches each function to a parameter and fills in the letters:
+Let's consider the three-function signature associated with `pipe(trim, length, atMost(160))`. TypeScript matches each function to a parameter and fills in the letters:
 
 - `ab` is `trim`, so `A` is `string` and `B` is `string`.
 - `bc` is `length`, so `B` is `string` and `C` is `number`.
@@ -109,7 +103,7 @@ The shared `B` and `C` check the connections.
 
 The three-function overload tells TypeScript that we want to go from `A` to `D`. The function we get back is `(a: A) => D`, which here works out to `(a: string) => boolean`.
 
-Callers see the signatures in `Pipe`. The implementation still uses `any` to run the steps, so the overloads are the part that checks the connections at the call site.
+The implementation still uses `any` to run the steps, but thanks to the overloads, we're leveraging TypeScript's abilities to check the connections at the call site.
 
 <TsSandbox
   id="variadic-trace-pipeline"
@@ -118,9 +112,7 @@ Callers see the signatures in `Pipe`. The implementation still uses `any` to run
   files={{ "functions.ts": functionsSource, "pipe.ts": pipeSource }}
 />
 
-No nesting, and TypeScript still infers `(a: string) => boolean`. It even handles our generic `trace` in the middle: `trace("trimmed")` receives a `string`, so it returns a `string`, and `length` gets exactly what it expects.
-
-Adding `trace` selects the four-function overload, so we're now going from `A` to `E`. Here, `A`, `B`, and `C` are `string`, `D` is `number`, and `E` is `boolean`. There is another connection to check, while the input and return types are still `string` and `boolean`.
+Adding `trace` gives us four steps, so TypeScript selects the four-function overload. The new step logs the string and passes it on unchanged, so the pipeline still accepts a string and returns a boolean.
 
 And if we swap two functions, TypeScript catches it:
 
@@ -131,7 +123,7 @@ And if we swap two functions, TypeScript catches it:
   files={{ "functions.ts": functionsSource, "pipe.ts": pipeSource }}
 />
 
-## Typing compose
+## From `pipe` to `compose`
 
 `compose` gets the same treatment. Its signatures match `Pipe`'s, with the parameters listed in reverse. The rightmost function runs first.
 
@@ -144,7 +136,7 @@ And if we swap two functions, TypeScript catches it:
 
 `compose` uses `.reduceRight()` to run the same steps as `pipe(trim, length, atMost(160))`.
 
-The `trace` version has four steps, just like our `pipe` example. We can also swap `trim` and `length` to see `compose` reject an incompatible connection. Choose **Edit this code**, then put the functions back in the correct order to clear the error.
+The `trace` version has four steps, just like our `pipe` example. We can also swap `trim` and `length` to see `compose` reject an incompatible connection. For those interested in seeing this error surface, I encourage you to run the code block below.
 
 <TsSandbox
   id="variadic-incompatible-compose"
@@ -153,16 +145,25 @@ The `trace` version has four steps, just like our `pipe` example. We can also sw
   files={{ "functions.ts": functionsSource, "compose.ts": composeSource }}
 />
 
-There is one important thing to call out: our overloads have a limit, they stop at four functions. Pass in five, and TypeScript tells us `Expected 1-4 arguments, but got 5.` For a longer pipeline, we can add more signatures, or we can nest `pipe` or `compose` calls. Function composition is associative, so how we group the functions doesn't change the result.
+### An exercise in progressive overloads
 
-## Try it yourself
+Our overloads have a limit. They stop at four functions. Pass in five, and TypeScript tells us `Expected 1-4 arguments, but got 5.`
 
-Press **Edit this code** and compare `fitsSummary` with `fitsSummaryWithCompose`. They run the same steps in opposite argument order. Swap `length` and `atMost(160)` in either one. Where does the type error land?
+For a longer pipeline, we can add more signatures or nest `pipe` or `compose` calls. Function composition is associative, so how we group the functions doesn't change the result.
+
+Here's your chance to try a little progressive overload. Add a five-function signature to both `Pipe` and `Compose` below. The utility functions are imported so you can focus on the signatures.
+
+Both five-function calls start with type errors. The runtime already handles five steps, so the challenge is to make TypeScript accept the calls and infer `(a: string) => boolean` for both functions. Once that works, swap two incompatible steps and check that TypeScript still catches the mistake.
 
 <TsSandbox
-  id="composition-playground"
-  title="Composition playground"
-  code={playground}
+  id="variadic-progressive-overloads"
+  title="Add a fifth overload"
+  code={progressiveOverloads}
+  files={{ "functions.ts": functionsSource }}
 />
+
+## Recap, thank you!
+
+And thus concludes this segment on strongly typed variadic functions in TypeScript! We've built `pipe` and `compose` without a third-party library, all while keeping the type connections intact. When we need a longer pipeline, we can add another overload. As always, thanks for reading! I sincerely hope you've gained something from checking it out.
 
 {/* Writing source: Logseq / Extending for variadic functions. Practice: lab 4 introduces tuple tools, not a complete variadic-pipe solution. References: [TS 3.4 higher-order inference](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-4.html), [TS 4.0 variadic tuples](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-0.html). */}
