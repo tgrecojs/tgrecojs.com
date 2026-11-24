@@ -7,6 +7,7 @@
 import { siteConfig } from '../site-config';
 import { CHECK_DEBOUNCE_MS, compilerOptions } from './config';
 import { renderDiagnostics, toReadable, type ReadableDiagnostic } from './diagnostics';
+import { NODE_ASSERT_TYPES } from './node-assert';
 import type { MonacoEditor, MonacoEditorApi, MonacoModel, MonacoNamespace, MonacoUri, Sandbox, SandboxRuntime } from './types';
 import { describe } from './util';
 
@@ -82,6 +83,8 @@ export const createEditor = (
     isolatedMonaco(monaco, uri),
     ts,
   );
+
+  sandbox.languageServiceDefaults.addExtraLib(NODE_ASSERT_TYPES, 'file:///ts-sandbox/node-assert.d.ts');
 
   for (const [name, content] of Object.entries(source.files)) {
     sandbox.languageServiceDefaults.addExtraLib(content, `file://${folder}/${name}`);

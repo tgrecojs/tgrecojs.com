@@ -5,6 +5,7 @@
 // own console is never touched.
 
 import type { TsNamespace } from './types';
+import { NODE_ASSERT_URL } from './node-assert';
 
 export type OutputLevel = 'log' | 'info' | 'warn' | 'error';
 
@@ -96,13 +97,16 @@ export const runProgram = async (
 };
 
 /**
- * Points relative imports (`./timer`, `./timer.ts`) at replacement specifiers,
- * keyed by file name without extension: blob URLs here, `sandbox:` names in
- * the React preview.
+ * Resolves companion imports to their module URLs and node:assert to its
+ * browser implementation. Unknown imports keep their original specifiers.
  */
 export const rewriteImports = (js: string, moduleUrls: Record<string, string>) =>
-  js.replace(/(\bfrom\s*|\bimport\s*)(['"])(\.{1,2}\/[^'"]+)\2/g, (whole, lead: string, quote: string, spec: string) => {
-    const url = moduleUrls[stripExtension(spec.replace(/^\.{1,2}\//, ''))];
+  js.replace(/(\bfrom\s*|\bimport\s*)(['"])([^'"]+)\2/g, (whole, lead: string, quote: string, spec: string) => {
+    const url = spec === 'node:assert'
+      ? NODE_ASSERT_URL
+      : /^\.{1,2}\//.test(spec)
+        ? moduleUrls[stripExtension(spec.replace(/^\.{1,2}\//, ''))]
+        : undefined;
     return url ? `${lead}${quote}${url}${quote}` : whole;
   });
 
