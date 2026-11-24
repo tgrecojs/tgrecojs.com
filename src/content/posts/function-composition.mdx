@@ -21,11 +21,11 @@ import incompatibleSteps from "../../sandbox/typed-fp/pt3-composition/incompatib
 import trimmedSummary from "../../sandbox/typed-fp/pt3-composition/trimmed-summary.ts?raw";
 import pipe2Source from "../../sandbox/typed-fp/pt3-composition/pipe2.ts?raw";
 
-Function composition lets us build new functions by passing one function's result to the next. In the [currying post](/posts/curried-functions-in-typescript), we chose a transformation before supplying the data. Here, we'll connect transformations while keeping their types intact.
+Function composition lets us build new functions by passing one function’s result to the next. This post picks up where we left off in the [currying post](/posts/curried-functions-in-typescript), where we learned how to preserve types when choosing a transformation before supplying its data. Here, we’ll build on that to connect multiple functions into pipelines while keeping their types intact.
 
 ## One transformation after another
 
-Let's start with two functions we can combine.
+Let's start with two functions we can combine and see how two different approaches arrive at `[30]`.
 
 <TsSandbox
   id="composition-sequential"
@@ -33,7 +33,7 @@ Let's start with two functions we can combine.
   code={sequential}
 />
 
-Both give us `[30]`. First we add ten, then we double the result. The second version combines those operations in a single callback. What you may not have realized is that we just tested out the **composition law** from algebra.
+The first approach adds ten to each item in the `values` array, then uses a second `.map()` to double each result. The second approach combines those operations in a single callback. What you may not have realized is that we just tested out the **composition law** from algebra.
 
 $$
 (f \circ g)(x) = f(g(x))
@@ -49,13 +49,13 @@ Enough of the math talk though, let's move forward and create a new function tha
   code={explicit}
 />
 
-Now we have a function we can call directly or pass to `.map()`. While this is useful, we could wire up utility functions that allow us to create functions like `addTenThenDoubleExplicit` without having to write functions like Russian nesting dolls.
+Now we have a function we can call directly or pass to `.map()`. What we really want is a utility that lets us combine functions without nesting the calls like Russian dolls.
 
 ![Matryoshka doll](https://t4.ftcdn.net/jpg/11/03/53/33/360_F_1103533346_HeJrezkNYmpMFiF7R88KMMb0ErfkXCuf.jpg)
 
-## Connecting two functions with pipe2
+## Composing functions with `pipe2`
 
-`pipe2` takes two functions and returns a function that runs them in the order we pass them in.
+Now we're getting to the good stuff! The `pipe2` takes two functions and returns a function that runs them in the order we pass them in.
 
 <TsSandbox
   id="composition-pipe2"
@@ -63,11 +63,13 @@ Now we have a function we can call directly or pass to `.map()`. While this is u
   code={pipeExample}
 />
 
-`A` is the input type, and `C` is the return type. The shared `B` connects the first function's output to the second function's input. That's how TypeScript checks that the two functions fit together.
+`A` is the input type, and `C` is the return type. The shared `B` connects the first function's output to the second function's input.
 
-Here, all three types are `number`. TypeScript infers `(value: number) => number` for `addTenThenDouble`, so we can reuse it wherever we need that transformation.
+That shared `B` lets TypeScript check the connection before the code runs. It also infers `(value: number) => number` for `addTenThenDouble`, without another annotation. If we try to call `addTenThenDouble("5")`, we'll see TypeScript produces a type error.
 
-## The same steps with compose2
+Moving forward, let’s build the same transformation with the functions listed in the opposite order.
+
+## Composing functions with `compose2`
 
 `compose2` lets us write the functions in reverse order, or bottom-up, matching the composition law we looked at earlier. The rightmost function runs first.
 
@@ -77,13 +79,13 @@ Here, all three types are `number`. TypeScript infers `(value: number) => number
   code={composeExample}
 />
 
-The implementation is the same. We just changed the order of the parameters, so `compose2(double, addTen)` runs the same steps as `pipe2(addTen, double)`.
+The implementation is the same - we just changed the order of the parameters. `compose2(double, addTen)` runs the same steps as `pipe2(addTen, double)`. That said, I, personally, favor the bottom-up approach with compose, but you're free to chose whichever approach best suits you. :)
 
 ### When types aren't enough
 
-The order we pass functions in very much matters though. `pipe2(double, addTen)(5)` gives us `20`. Both orders accept and return numbers, so both type-check. To ensure we're getting the output we intend, we can use a test to check our result.
+We've seen firsthand how TypeScript checks that each function in the pipeline receives the correct input type. While there's no denying that this is useful, it's no substitute for tests. We could mistakenly pass functions in the wrong order, and because they both accept and return `number`, TypeScript will have no problem compiling our code. This is why it's important to pair our logic with tests to verify that the output matches our intended behavior.
 
-Run the test below. Swap `addTen` and `double`, then run it again. The types still fit, but we'll see the assertion fail because the result is `20`.
+Let's take a quick look at a code block showing this pitfall. TypeScript reports no errors, yet running the code below fails the `strictEqual` assertion because the result is `20` instead of `30`.
 
 <TsSandbox
   id="composition-order-test"
@@ -92,11 +94,15 @@ Run the test below. Swap `addTen` and `double`, then run it again. The types sti
   files={{ "pipe2.ts": pipe2Source }}
 />
 
-TypeScript is very useful, but it's still important to test our logic and verify that our code behaves as intended. As Eric Elliott so eloquently puts it, ["Type correctness does not guarantee program correctness."](https://medium.com/javascript-scene/the-shocking-secret-about-static-types-514d39bf30a3)
+Swap `double` and `addTen` in the `pipe2` call and run it again. The test passes when the result is `30`.
 
-## When the types change
+> Type correctness does not guarantee program correctness - [The Shocking Secret about Static Types](https://medium.com/javascript-scene/the-shocking-secret-about-static-types-514d39bf30a3).
 
-In the currying post, `maxLength(160)` counted characters and compared the count with a limit. Let's split those jobs into separate functions.
+## Composing functions with different types
+
+So far, we've composed functions that accept and return numbers. In production software, we often need to transform data from one type to another. Let's take a look at how we can handle this before we wrap up.
+
+For this example, we'll revisit `maxLength` from the currying post, but this time we'll put the character count and the limit check in separate functions.
 
 <TsSandbox
   id="composition-summary"
@@ -105,9 +111,11 @@ In the currying post, `maxLength(160)` counted characters and compared the count
   files={{ "pipe2.ts": pipe2Source }}
 />
 
+The assertions check that a 160-character summary passes and a 161-character summary fails. The console prints the result of each validation.
+
 TypeScript infers `A` as `string`, `B` as `number`, and `C` as `boolean`. The result is a reusable function that accepts text and tells us whether it fits.
 
-Now let's swap the steps. Choose **Edit this code** to see the type error, then swap the functions back to clear it.
+If we swap the functions so that `atMost(160)` appears first, TypeScript reports a type error. Choose **Edit this code** below to see it, then swap the functions back to clear it.
 
 <TsSandbox
   id="composition-incompatible"
@@ -118,7 +126,7 @@ Now let's swap the steps. Choose **Edit this code** to see the type error, then 
 
 TypeScript rejects this connection. `atMost(160)` returns a `boolean`, while `length` accepts a `string`. We get the error when we combine the functions, before we pass in any data.
 
-We can also use the function we've built as a step in another composition. If we want to ignore spaces at either end of the summary, we can trim the text first.
+Now let's add `trim` to the summary check so we can ignore spaces at either end. Since `fitsSummary` is a function itself, we can pass it straight into another `pipe2` call.
 
 <TsSandbox
   id="composition-trimmed-summary"
@@ -129,9 +137,11 @@ We can also use the function we've built as a step in another composition. If we
 
 `fitsSummary` already handles the count and the comparison. We can reuse it alongside `trim`, and TypeScript still infers `(value: string) => boolean` for the function we get back.
 
+This works, but adding more steps means making more `pipe2` calls. In the variadic functions post, we'll extend `pipe` and `compose` to list more than two functions in a single call.
+
 ## Try it yourself
 
-Here's the code in one place. Uncomment the last line to see TypeScript reject the reversed steps. Try combining `trim` and `fitsSummary` with `compose2` as well.
+Here's the composition code in one place. Uncomment the last line to see TypeScript reject the reversed steps, or try combining `trim` and `fitsSummary` with `compose2`. Go wild! The code sandbox is your oyster!
 
 <TsSandbox
   id="two-function-composition"
@@ -139,4 +149,4 @@ Here's the code in one place. Uncomment the last line to see TypeScript reject t
   code={playground}
 />
 
-And thus concludes our post! We've built functions that we can reuse on their own or pass into another composition. Each time, TypeScript checks the connection and infers the input and return types of the function we build. Useful stuff! In the post on variadic functions, we extend `pipe` and `compose` to accept more than two functions.
+And thus concludes our post! We've built functions that we can reuse on their own or pass into another composition. Each time, TypeScript checks the connection and infers the input and return types of the function we build. Useful stuff!
