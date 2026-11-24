@@ -24,7 +24,7 @@ const parts = ring.name.split(' & ');
       <circle class="node node-here" cx="24" cy="33" r="3.5" />
     </svg>
 
-    <a class="webring-name" href={ring.url}>
+    <a class="webring-name" href={ring.url} data-umami-event="webring" data-umami-event-to="ring">
       <span class="webring-name__text">
         {parts.map((part, i) => (
           <>
@@ -36,9 +36,9 @@ const parts = ring.name.split(' & ');
     </a>
 
     <p class="webring-steps">
-      {ring.prev && <a class="step step-prev" href={ring.prev}><span aria-hidden="true">←</span>{' '}Previous</a>}
-      {ring.random && <a class="step step-random" href={ring.random}>Random</a>}
-      {ring.next && <a class="step step-next" href={ring.next}>Next{' '}<span aria-hidden="true">→</span></a>}
+      {ring.prev && <a class="step step-prev" href={ring.prev} data-umami-event="webring" data-umami-event-to="previous"><span aria-hidden="true">←</span>{' '}Previous</a>}
+      {ring.random && <a class="step step-random" href={ring.random} data-umami-event="webring" data-umami-event-to="random">Random</a>}
+      {ring.next && <a class="step step-next" href={ring.next} data-umami-event="webring" data-umami-event-to="next">Next{' '}<span aria-hidden="true">→</span></a>}
     </p>
 
     <p class="webring-what mono">a webring · small sites, real people, no newsletters</p>

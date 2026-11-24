@@ -1,0 +1,107 @@
+---
+// The like button at the end of a post. The count lives behind /api/likes (api/likes.ts, a
+// Vercel Function). The button stays hidden until that route answers, so a reader without
+// JavaScript, or one who is offline, never sees a control that cannot work.
+// A like cannot be taken back, and this browser remembers it in localStorage.
+interface Props {
+  /** The post's stable id (see `stableId` in src/lib/posts.ts). */
+  id: string;
+}
+const { id } = Astro.props;
+---
+
+<button type="button" class="like" data-like={id} aria-pressed="false" aria-label="Like this post" hidden>
+  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+    <path d="M8 13.7 2.6 8.5a3.3 3.3 0 0 1 0-4.8 3.6 3.6 0 0 1 5 0l.4.4.4-.4a3.6 3.6 0 0 1 5 0 3.3 3.3 0 0 1 0 4.8Z" />
+  </svg>
+  <span data-like-count>0</span>
+</button>
+
+<style>
+  /* Same pill as the share buttons beside it. */
+  .like {
+    display: inline-flex; align-items: center; gap: .45em;
+    min-height: var(--control-h); padding: 0 1rem;
+    font: 500 var(--fs-1)/1 var(--f-mono); font-variant-numeric: tabular-nums; color: var(--ink);
+    background: var(--paper); border: var(--control-border); border-radius: 999px;
+    cursor: pointer; touch-action: manipulation;
+    transition: background-color 150ms ease-out, transform 100ms ease-out;
+  }
+  .like[hidden] { display: none; }
+  .like:hover { background: var(--paper-2); }
+  .like:active { transform: scale(.96); }
+  /* The heart is drawn like the site's dots: an ink outline, filled mustard once liked. */
+  .like path {
+    fill: transparent; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round;
+    transition: fill 150ms ease-out;
+  }
+  .like[aria-pressed='true'] { cursor: default; }
+  .like[aria-pressed='true']:hover { background: var(--paper); }
+  .like[aria-pressed='true']:active { transform: none; }
+  .like[aria-pressed='true'] path { fill: var(--mustard); }
+  @media (prefers-reduced-motion: reduce) { .like, .like path { transition: none; } }
+</style>
+
+<script>
+  import { track } from '../lib/track';
+
+  const button = document.querySelector<HTMLButtonElement>('[data-like]');
+  const number = button?.querySelector<HTMLElement>('[data-like-count]');
+  if (button && number) {
+    const id = button.dataset.like!;
+    const url = `/api/likes?id=${encodeURIComponent(id)}`;
+    const saved = `liked:${id}`;
+
+    // Storage can be blocked; the like then lasts for this page view.
+    const remembered = () => {
+      try {
+        return localStorage.getItem(saved) !== null;
+      } catch {
+        return false;
+      }
+    };
+
+    // The visible label is always the number, so a like changes no widths around it.
+    const show = (count: number, liked: boolean) => {
+      number.textContent = String(count);
+      button.setAttribute('aria-pressed', String(liked));
+      const likes = count === 1 ? '1 like' : `${count} likes`;
+      button.setAttribute('aria-label', liked ? `You liked this post. ${likes}.` : `Like this post. ${likes}.`);
+    };
+
+    const request = async (method: 'GET' | 'POST') => {
+      const response = await fetch(url, { method });
+      if (!response.ok) throw new Error(`Likes responded ${response.status}`);
+      return ((await response.json()) as { count: number }).count;
+    };
+
+    let count = 0;
+    request('GET')
+      .then((current) => {
+        count = current;
+        show(count, remembered());
+        button.hidden = false;
+      })
+      .catch(() => {
+        // No count, no button: the post reads the same without it.
+      });
+
+    button.addEventListener('click', async () => {
+      if (button.getAttribute('aria-pressed') === 'true') return;
+      // Show the like at once, then settle on the server's count, or take it back on failure.
+      show(count + 1, true);
+      try {
+        count = await request('POST');
+        show(count, true);
+        track('like', { id });
+        try {
+          localStorage.setItem(saved, '1');
+        } catch {
+          // See `remembered` above.
+        }
+      } catch {
+        show(count, false);
+      }
+    });
+  }
+</script>

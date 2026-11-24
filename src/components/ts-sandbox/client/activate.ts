@@ -4,6 +4,7 @@
 // and ReactSandbox differ only in the instance they create, so both mounts
 // go through this module.
 
+import { track } from '../../../lib/track';
 import { TS_VERSION } from './config';
 import { loadSandboxRuntime } from './loader';
 import { ensureSiteTheme } from './theme';
@@ -92,7 +93,10 @@ export const wireSandbox = <T extends Activatable>(
     return activating;
   };
 
+  const id = root.dataset.sandboxId ?? 'sandbox';
+
   editButton.addEventListener('click', () => {
+    track('sandbox-edit', { id });
     void ensureInstance()
       .then((created) => {
         if (matchMedia('(hover: hover) and (pointer: fine)').matches) created.focus();
@@ -101,6 +105,7 @@ export const wireSandbox = <T extends Activatable>(
   });
 
   runButton.addEventListener('click', () => {
+    track('sandbox-run', { id });
     void ensureInstance()
       .then((created) => created.run())
       .catch(() => {});

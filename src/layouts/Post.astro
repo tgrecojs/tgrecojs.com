@@ -48,7 +48,7 @@ const jsonLd = {
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   </Fragment>
 
-  <article class="post">
+  <article class="post" data-minutes={minutesRead(post)}>
     <header class="post-header">
       <div class="meta mono">
         <i class={`dot ${postDot(post, posts)}`} aria-hidden="true"></i>
@@ -143,6 +143,8 @@ const jsonLd = {
 </style>
 
 <script>
+  import { track as sendEvent } from '../lib/track';
+
   // Marks the contents links whose sections are on screen, and stretches the rail marker
   // over them. A section runs from its h2 to the next h2, or to the end of the prose.
   const list = document.querySelector<HTMLElement>('.contents ol');
@@ -171,5 +173,24 @@ const jsonLd = {
     addEventListener('scroll', track, { passive: true });
     addEventListener('resize', track);
     track();
+  }
+
+  // Sends "read-to-end" to Umami once the post's ending is on screen and the reader has had
+  // the page open for a quarter of the estimated reading time. The wait keeps a quick scroll
+  // to the footer from counting as a read.
+  const article = document.querySelector<HTMLElement>('.post');
+  const ending = document.querySelector('.post-end');
+  if (article && ending) {
+    const due = (Number(article.dataset.minutes) * 60_000) / 4;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const reached = new IntersectionObserver(([entry]) => {
+      clearTimeout(timer);
+      if (!entry.isIntersecting) return;
+      timer = setTimeout(() => {
+        sendEvent('read-to-end');
+        reached.disconnect();
+      }, Math.max(0, due - performance.now()));
+    });
+    reached.observe(ending);
   }
 </script>

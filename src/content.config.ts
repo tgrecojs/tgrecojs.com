@@ -23,6 +23,9 @@ const posts = defineCollection({
     minutesRead: z.number().optional(),
     // Path under /public to a self-contained Colorfigures page, e.g. /figures/telescope.html
     figure: z.string().optional(),
+    // The id the post was first published under. Comments and likes are stored under it,
+    // so set it to the old id when you rename a post and they follow the post.
+    originalId: z.string().optional(),
   }),
 });
 

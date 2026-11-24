@@ -11,6 +11,9 @@ export const getPosts = async (): Promise<Post[]> =>
 export const formatDate = (d: Date) =>
   d.toLocaleDateString('en-GB', { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' });
 
+/** The key a post's comments and likes are stored under. It survives a rename; see `originalId` in content.config.ts. */
+export const stableId = (post: Post) => post.data.originalId ?? post.id;
+
 /** Lists alternate cobalt and mustard dots. A post keeps the colour of its slot in the newest-first list. */
 export const dotClass = (index: number) => (index % 2 === 0 ? 'dot-a' : 'dot-b');
 

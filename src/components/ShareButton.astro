@@ -46,6 +46,8 @@ const { title, url } = Astro.props;
 </style>
 
 <script>
+  import { track } from '../lib/track';
+
   for (const root of document.querySelectorAll<HTMLElement>('[data-share]')) {
     const title = root.dataset.title ?? document.title;
     const url = root.dataset.url ?? location.href;
@@ -58,6 +60,7 @@ const { title, url } = Astro.props;
       native.addEventListener('click', async () => {
         try {
           await navigator.share({ title, url });
+          track('share');
         } catch {
           // The reader closed the sheet; nothing to report.
         }
@@ -95,6 +98,7 @@ const { title, url } = Astro.props;
         if (status) status.textContent = 'Copying failed. The address bar has the link.';
         return;
       }
+      track('copy-link');
       copy.dataset.copied = 'true';
       if (status) status.textContent = 'Link copied';
       clearTimeout(timer);

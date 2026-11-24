@@ -1,11 +1,13 @@
 ---
-// Everything after a post's last paragraph, in three bands under one rule: the author's
-// sign-off with the share controls, the chronological neighbours, and a short list of
-// related posts. Shared links land readers on a post, not the home page, so this is the
-// first place most of them meet the rest of the site. The site footer right below carries
-// the social links, so they are not repeated here.
+// Everything after a post's last paragraph, in bands under one rule: the author's sign-off
+// with the like and share controls, the chronological neighbours, a short list of related
+// posts, and the comments once src/site.ts configures them. Shared links land readers on a
+// post, not the home page, so this is the first place most of them meet the rest of the
+// site. The site footer right below carries the social links, so they are not repeated here.
 import { site } from '../site';
-import { neighbours, postDot, related, type Post } from '../lib/posts';
+import { neighbours, postDot, related, stableId, type Post } from '../lib/posts';
+import Comments from './Comments.astro';
+import LikeButton from './LikeButton.astro';
 import ShareButton from './ShareButton.astro';
 
 interface Props {
@@ -26,7 +28,10 @@ const rest = site.description.startsWith(site.author) ? site.description.slice(s
 <footer class="post-end">
   <section class="signoff" aria-label="About the author">
     <p class="bio">{rest === null ? site.description : <><b>{site.author}</b>{rest}</>}</p>
-    <ShareButton title={post.data.title} url={url} />
+    <div class="actions">
+      <LikeButton id={stableId(post)} />
+      <ShareButton title={post.data.title} url={url} />
+    </div>
   </section>
 
   {(older || newer) && (
@@ -59,6 +64,13 @@ const rest = site.description.startsWith(site.author) ? site.description.slice(s
       </ul>
     </section>
   )}
+
+  {site.comments.repoId && site.comments.categoryId && (
+    <section aria-labelledby="comments-heading">
+      <h2 id="comments-heading" class="eyebrow">Comments</h2>
+      <Comments term={stableId(post)} />
+    </section>
+  )}
 </footer>
 
 <style>
@@ -68,6 +80,7 @@ const rest = site.description.startsWith(site.author) ? site.description.slice(s
   .signoff { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 1rem 2rem; }
   .bio { margin: 0; max-width: 28rem; color: var(--ink-2); text-wrap: pretty; }
   .bio b { color: var(--ink); font-weight: 600; }
+  .actions { display: flex; align-items: center; gap: .5rem .6rem; flex-wrap: wrap; }
   @media (max-width: 560px) { .signoff { grid-template-columns: 1fr; } }
 
   /* Previous and next share one plate: ink border, cobalt shadow, a hairline between.

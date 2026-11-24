@@ -28,6 +28,7 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return; // fonts and other hosts: browser default
+  if (url.pathname.startsWith('/api/')) return; // live data (like counts): never from cache
 
   if (url.pathname.startsWith('/_astro/')) {
     event.respondWith(cacheFirst(request));

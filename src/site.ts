@@ -30,4 +30,14 @@ export const site = {
     random:
       "https://webri.ng/webring/types_and_telescopes/random?via=https%3A%2F%2Ftgrecojs.com",
   },
+  // Post comments are GitHub Discussions, shown by giscus (src/components/Comments.astro).
+  // They render only once `repoId` and `categoryId` are set. The repo must be public, have
+  // Discussions turned on and the giscus app installed; https://giscus.app lists both ids
+  // once you enter the repo name there.
+  comments: {
+    repo: "tgrecojs/tgrecojs.com",
+    repoId: "R_kgDOVaCJFA",
+    category: "Announcements",
+    categoryId: "DIC_kwDOVaCJFM4DL51w",
+  },
 } as const;

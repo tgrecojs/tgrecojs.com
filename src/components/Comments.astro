@@ -1,0 +1,59 @@
+---
+// Reader comments, by giscus (https://giscus.app). Each post's thread is a GitHub Discussion
+// in the repo named in src/site.ts, and readers sign in with GitHub to write. PostFooter
+// renders this only once that config has its ids.
+//
+// A thread is found by `term`, not by the page URL, so renaming a post does not orphan its
+// comments. Post reactions are off because the like button already does that job.
+import { site } from '../site';
+
+interface Props {
+  /** The Discussion's title: the post's stable id (see `stableId` in src/lib/posts.ts). */
+  term: string;
+}
+const { term } = Astro.props;
+const { repo, repoId, category, categoryId } = site.comments;
+---
+
+<div
+  class="giscus"
+  data-repo={repo}
+  data-repo-id={repoId}
+  data-category={category}
+  data-category-id={categoryId}
+  data-term={term}
+></div>
+
+<script>
+  // giscus reads its settings from its own script tag, so the tag is built here, where the
+  // reader's current theme is known. Its iframe loads lazily, when the reader gets near it.
+  const host = document.querySelector<HTMLElement>('.giscus');
+  if (host) {
+    const system = matchMedia('(prefers-color-scheme: dark)');
+    const theme = () => document.documentElement.dataset.theme ?? (system.matches ? 'dark' : 'light');
+
+    const client = document.createElement('script');
+    client.src = 'https://giscus.app/client.js';
+    client.async = true;
+    client.crossOrigin = 'anonymous';
+    Object.assign(client.dataset, host.dataset, {
+      mapping: 'specific',
+      strict: '1',
+      reactionsEnabled: '0',
+      emitMetadata: '0',
+      inputPosition: 'top',
+      theme: theme(),
+      lang: 'en',
+      loading: 'lazy',
+    });
+    host.after(client);
+
+    // Keep the iframe's theme in step with the site's toggle and the system setting.
+    const sync = () =>
+      document
+        .querySelector<HTMLIFrameElement>('iframe.giscus-frame')
+        ?.contentWindow?.postMessage({ giscus: { setConfig: { theme: theme() } } }, 'https://giscus.app');
+    new MutationObserver(sync).observe(document.documentElement, { attributeFilter: ['data-theme'] });
+    system.addEventListener('change', sync);
+  }
+</script>

@@ -52,13 +52,48 @@ badge in the footer (`src/components/Webring.astro`) draws the ring as an orbit 
 to webri.ng's previous, random and next endpoints; it renders nothing while `webring.url`
 is empty.
 
-Every post ends with `src/components/PostFooter.astro`: the author line with the share
-controls (copy link, and the system share sheet where the browser has one), the previous
-and next post by date, and up to three related posts (same series first, then shared tags,
-never repeating the neighbours). `src/lib/posts.ts` has the list helpers:
+Every post ends with `src/components/PostFooter.astro`: the author line with the like
+button and the share controls (copy link, and the system share sheet where the browser has
+one), the previous and next post by date, up to three related posts (same series first,
+then shared tags, never repeating the neighbours), and the comments once they are
+configured. `src/lib/posts.ts` has the list helpers:
 published posts newest first, reading time from the body when `minutesRead` is not set,
 neighbours, related posts, and the alternating dot colour (cobalt on even slots, mustard
 on odd).
+
+## Likes and comments
+
+`api/likes.ts` is the site's only server code. Vercel deploys it as a function at
+`/api/likes`, beside the static build, and it keeps one count per post in an Upstash Redis
+store installed from the Vercel Marketplace. A like counts once per network address, and
+no address is stored; the file's header explains how. A small plugin in `astro.config.mjs`
+runs the same function under `astro dev`, using the credentials `vercel env pull` writes
+to `.env.local`. Only the production deployment counts real likes: previews and local dev
+keep theirs under separate keys.
+
+Comments are GitHub Discussions shown by [giscus](https://giscus.app). They appear once
+`comments.repoId` and `comments.categoryId` are set in `src/site.ts`. The repo named there
+must be public, have Discussions turned on and have the giscus app installed.
+
+Likes and comments are stored under the post's id. When you rename a post, set
+`originalId` in its frontmatter to the old id so both follow it.
+
+## Analytics events
+
+Umami counts page views on its own. The site also sends it these named events:
+
+| Event                         | Sent when                                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------------------------ |
+| `read-to-end`                 | A post's ending is on screen and the page has been open for a quarter of its reading time  |
+| `like`                        | A reader likes a post (`id` is the post)                                                   |
+| `share`                       | A reader shares a post from the system share sheet                                         |
+| `copy-link`                   | A reader copies a post's link                                                              |
+| `sandbox-edit`, `sandbox-run` | A reader opens or runs a code sandbox (`id` is the sandbox)                                |
+| `webring`                     | A reader follows a webring link (`to` is `ring`, `previous`, `random` or `next`)           |
+
+Scripts send an event with `track()` from `src/lib/track.ts`; a link can carry a
+`data-umami-event` attribute instead. The Umami script loads only in production builds, so
+nothing is sent from `astro dev`.
 
 ## Cross-posting to Hindley Milner Systems
 
@@ -92,7 +127,7 @@ each card and its meta tags. Emoji in titles are drawn with
 ## Deploy
 
 Static site; no adapter needed. Connect the repo to Vercel with the Astro preset, or run
-`vercel` from this directory. The `site` in `astro.config.mjs` is `https://tgrecojs.com`;
+`vercel` from this directory. Vercel picks up `api/likes.ts` as a function on its own. The `site` in `astro.config.mjs` is `https://tgrecojs.com`;
 sitemap, RSS and canonical URLs build from it.
 
 Ideas for taking the site fully distributed are in [docs/FUTURE.md](docs/FUTURE.md).
