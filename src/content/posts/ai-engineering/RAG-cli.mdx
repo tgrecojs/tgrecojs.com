@@ -1,0 +1,43 @@
+---
+title: "Building a RAG pipeline with TypeScript"
+description: Learn how retrieval and generation work using evidence from Apple's FY2025 10-K.
+pubDate: 2026-11-12
+tags: ["typescript", "RAG"]
+draft: true
+source: here
+---
+
+# RAG to Riches
+
+We live in an incredibly interesting time. So interesting, in fact, that the narrative surrounding AI is that it's going to leave all of us software engineers jobless, which doesn't matter so much when you take into account the non-zero change that LLMs are going to end humanity. Yes, incredibly interest times indeed.
+
+While I don't subscribe to the aforementioned narrative, I do subscribe to the idea that LLMs are incredibly powerful tools that, if used correctly, can signifcantly improve the capabilities of mankind. I've also witnessed first-hand the atrophy that can come with forwarding all of your work to LLMs and being a meat-proxy, and I'm not going to lie, I disliked that very much. A few weeks ago I heard an amazing comparison between LLMs and weight-lifting machines. When machines came into play, people could hyperfocus on training body parts correctly without having to worry about stabilizng muscles, balance, etc. It unlocked levels of strength that were not seen prior. This is really how I feel about AI as a tool for expanding our abilities. With AI, I can eliminate the friction of searching for proper content. With AI, I can tackle complex topics in a way that works for me - small, manageable steps. And this was a major reason why I started to write. I wanted to revisit topics, and also learn new topics, so I've been working to grow my brain muscle as opposed to letting it atrophy.
+
+Personal rant complete. Now, let's get into the subject matter... RAG.
+
+## What is RAG?
+
+Retrieval-augmented generation (RAG) starts with a search. When you ask a question, the application looks for a few relevant passages and sends them to a language model along with your question. The model uses that material to write an answer. If you keep track of where the passages came from, you can give the reader links to check the answer for themselves.
+
+This is useful when the answer depends on a particular document or changes over time. If I ask what supply-chain risks Apple disclosed in fiscal 2025, I want to see what Apple said in that year's filing and have a way to read the relevant section myself.
+
+For this demo, I'm starting with two short summaries from Apple's FY2025 10-K. I'll run the search on its own first so we can see which summary it picks up. Then I'll pass the retrieved evidence to a local model and look at the answer and its citations.
+
+## Post 1. From SEC filing to cited answer
+
+**Start.** The CLI has two hand-curated summaries from Apple's FY2025 10-K. Run it once with Ollama and once with `OLLAMA_MODEL` unset. Trace the records from `fixtures/apple-filing.ts` through retrieval, the model request, and the citation check.
+
+**Write.** Open with the supply-chain answer and its two links. Explain how the program picks evidence, what the model receives, and why the code resolves links from source IDs. Check one claim against the original filing.
+
+**Show the failure.** Run these two questions from `ai-finance-lab` with generation disabled.
+
+```sh
+env -u OLLAMA_MODEL npm run ask -- 'What vendor concentration does Apple disclose in its FY2025 10-K?'
+env -u OLLAMA_MODEL npm run ask -- 'What risks surrounding vendor concentration does Apple disclose in its FY2025 10-K?'
+```
+
+The first run finds no matching keywords in the summaries. In the second, `risks` matches the outsourcing summary. FY2025 passes the same fiscal-year filter in both runs. Explain why matching a broad term gets this passage into context and how it could also surface irrelevant passages in a larger corpus.
+
+**End.** Add one evidence record by hand with its actual source link and try a question that retrieves it. Save the cited answer and the two comparison outputs for the post. Automated HTML extraction starts in Post 2.
+
+**Explain aloud.** What made the passage reach the model? What does checking a source ID prove about the answer?

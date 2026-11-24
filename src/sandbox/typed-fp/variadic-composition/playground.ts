@@ -1,6 +1,5 @@
 // pipe: runs its functions left to right
 type Pipe = {
-  (): <A>(a: A) => A;
   <A, B>(ab: (a: A) => B): (a: A) => B;
   <A, B, C>(ab: (a: A) => B, bc: (b: B) => C): (a: A) => C;
   <A, B, C, D>(ab: (a: A) => B, bc: (b: B) => C, cd: (c: C) => D): (a: A) => D;
@@ -57,6 +56,9 @@ console.log(normalize("  Hello World  ")); // "hello world"
 const fitsSummary = pipe(normalize, length, trace("length"), atMost(160));
 console.log(fitsSummary("  A short summary  ")); // true
 
+const fitsSummaryWithCompose = compose(atMost(160), trace("length"), length, normalize);
+console.log(fitsSummaryWithCompose("  A short summary  ")); // true
+
 const addTenThenDouble = compose(double, addTen);
 console.log(addTenThenDouble(1)); // 22
 
@@ -64,4 +66,4 @@ console.log(addTenThenDouble(1)); // 22
 // 1. Swap length and atMost(160) in fitsSummary. Where does the error land?
 // 2. Move trace("trimmed") to a different spot in normalize.
 // 3. Rewrite fitsSummary with compose instead of pipe.
-// 4. Call pipe() with no functions and hover over the result.
+// 4. Pass a fifth function to pipe or compose and inspect the error.
