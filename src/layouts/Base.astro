@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import Analytics from '@vercel/analytics/astro';
+import SpeedInsights from '@vercel/speed-insights/astro';
 import ThemeScript from '../components/ThemeScript.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import Webring from '../components/Webring.astro';
@@ -121,5 +122,6 @@ const path = Astro.url.pathname.replace(/\/$/, '') || '/';
         </script>
       )
     }
+    <SpeedInsights />
   </body>
 </html>

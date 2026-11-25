@@ -24,6 +24,7 @@
     "@twemoji/svg": "15.0.0",
     "@upstash/redis": "^1.41.1",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.1.0",
     "astro": "^7.4.2",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0",
